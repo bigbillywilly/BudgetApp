@@ -3,12 +3,14 @@
 ## System Requirements
 
 ### Development Environment
+
 - **Operating System:** Windows 10+, macOS 12+, or Ubuntu 20.04+
 - **Memory:** 8GB RAM minimum, 16GB recommended
 - **Storage:** 10GB free space for development environment
 - **Network:** Stable internet connection for package downloads and AI API calls
 
 ### Required Software
+
 - **Node.js:** 20.15.1 LTS
 - **npm:** 10.7.0+ (included with Node.js)
 - **Git:** Latest stable version
@@ -16,6 +18,7 @@
 - **Code Editor:** Visual Studio Code (recommended)
 
 ### Browser Support
+
 - **Chrome:** 100+
 - **Firefox:** 100+
 - **Safari:** 15+
@@ -24,6 +27,7 @@
 ## Package Dependencies
 
 ### Frontend Dependencies
+
 ```json
 {
   "react": "^18.3.1",
@@ -42,6 +46,7 @@
 ```
 
 ### Backend Dependencies
+
 ```json
 {
   "express": "^4.19.2",
@@ -61,6 +66,7 @@
 ```
 
 ### Development Dependencies
+
 ```json
 {
   "nodemon": "^3.1.4",
@@ -76,14 +82,17 @@
 ## Infrastructure Requirements
 
 ### Database
+
 - **PostgreSQL:** 16.x
 - **Redis:** 7.2.x
 
 ### External Services
+
 - **OpenAI API:** GPT-4 access required
 - **Cloud Storage:** For file uploads (development: local storage)
 
 ### Development Infrastructure
+
 ```yaml
 # Docker Compose Services
 services:
@@ -94,17 +103,18 @@ services:
       POSTGRES_USER: dev_user
       POSTGRES_PASSWORD: dev_password
     ports:
-      - "5432:5432"
-  
+      - '5432:5432'
+
   redis:
     image: redis:7.2-alpine
     ports:
-      - "6379:6379"
+      - '6379:6379'
 ```
 
 ## Environment Variables
 
 ### Required Environment Variables
+
 ```env
 # Database Connection
 DATABASE_URL="postgresql://dev_user:dev_password@localhost:5432/family_budget"
@@ -142,6 +152,7 @@ VITE_MAX_FILE_SIZE=10485760
 ## Performance Requirements
 
 ### Response Time Targets
+
 - **Page Load:** < 2 seconds on 3G connection
 - **API Response:** < 500ms for standard requests
 - **File Upload Processing:** < 30 seconds for typical bank statements
@@ -149,6 +160,7 @@ VITE_MAX_FILE_SIZE=10485760
 - **Database Queries:** < 100ms for standard operations
 
 ### Scalability Requirements
+
 - **Concurrent Users:** Support 10+ simultaneous users
 - **Data Volume:** Handle 10,000+ transactions per user
 - **File Processing:** Support CSV files up to 10MB
@@ -157,18 +169,21 @@ VITE_MAX_FILE_SIZE=10485760
 ## Security Requirements
 
 ### Authentication & Authorization
+
 - **Password Policy:** Minimum 8 characters, mixed case, numbers, symbols
 - **Session Management:** JWT with 15-minute expiry, 7-day refresh tokens
 - **Rate Limiting:** 100 requests per minute per IP
 - **CORS Policy:** Restricted to development/production domains
 
 ### Data Protection
+
 - **Encryption in Transit:** HTTPS/TLS 1.3 for all communications
 - **Encryption at Rest:** Database column encryption for sensitive data
 - **Input Validation:** All user inputs validated and sanitized
 - **File Upload Security:** Virus scanning, type validation, size limits
 
 ### Privacy Requirements
+
 - **Data Minimization:** Collect only necessary financial data
 - **Local Processing:** AI insights processed without storing personal data
 - **Data Retention:** User-controlled data deletion
@@ -177,12 +192,14 @@ VITE_MAX_FILE_SIZE=10485760
 ## Testing Requirements
 
 ### Test Coverage Targets
+
 - **Unit Tests:** 80%+ code coverage
 - **Integration Tests:** All API endpoints tested
 - **End-to-End Tests:** Critical user journeys automated
 - **Performance Tests:** Load testing with realistic data volumes
 
 ### Required Test Types
+
 - **Unit Testing:** Jest for business logic
 - **Component Testing:** React Testing Library
 - **API Testing:** Supertest for Express endpoints
@@ -192,6 +209,7 @@ VITE_MAX_FILE_SIZE=10485760
 ## Development Tools
 
 ### Required IDE Extensions (VS Code)
+
 ```json
 {
   "recommendations": [
@@ -206,6 +224,7 @@ VITE_MAX_FILE_SIZE=10485760
 ```
 
 ### Code Quality Standards
+
 - **TypeScript:** Strict mode enabled
 - **ESLint:** Airbnb configuration with TypeScript rules
 - **Prettier:** Consistent code formatting
@@ -215,11 +234,13 @@ VITE_MAX_FILE_SIZE=10485760
 ## Deployment Requirements
 
 ### Development Environment
+
 - **Hot Reload:** Sub-2-second refresh times
 - **Docker Compose:** One-command development setup
 - **Environment Isolation:** Containerized services
 
 ### Production Environment (Future)
+
 - **Frontend Hosting:** Vercel or similar CDN-enabled platform
 - **Backend Hosting:** Railway, Heroku, or similar Node.js platform
 - **Database:** Managed PostgreSQL service
@@ -228,6 +249,7 @@ VITE_MAX_FILE_SIZE=10485760
 ## Compatibility Matrix
 
 ### Node.js Version Compatibility
+
 ```
 Node.js 20.15.1 LTS: ✅ Recommended
 Node.js 18.x LTS:    ✅ Supported
@@ -236,6 +258,7 @@ Node.js < 18:        ❌ Not supported
 ```
 
 ### Package Manager Compatibility
+
 ```
 npm 10.x:  ✅ Recommended
 npm 9.x:   ✅ Supported
@@ -244,6 +267,7 @@ pnpm:      ⚠️  Not tested
 ```
 
 ### Database Version Compatibility
+
 ```
 PostgreSQL 16.x: ✅ Recommended
 PostgreSQL 15.x: ✅ Supported
@@ -254,6 +278,7 @@ PostgreSQL < 14: ❌ Not supported
 ## Installation Verification
 
 ### System Check Commands
+
 ```bash
 # Verify Node.js version
 node --version
@@ -273,6 +298,7 @@ git --version
 ```
 
 ### Project Setup Verification
+
 ```bash
 # Install dependencies
 npm run setup
@@ -293,6 +319,7 @@ curl http://localhost:5173
 ### Common Issues
 
 **Node.js Version Mismatch**
+
 ```bash
 # Use Node Version Manager (recommended)
 nvm install 20.15.1
@@ -300,6 +327,7 @@ nvm use 20.15.1
 ```
 
 **Docker Services Not Starting**
+
 ```bash
 # Reset Docker environment
 docker-compose down -v
@@ -307,6 +335,7 @@ docker-compose up -d
 ```
 
 **Database Connection Issues**
+
 ```bash
 # Verify PostgreSQL is running
 docker ps | grep postgres
@@ -316,6 +345,7 @@ npm run db:studio
 ```
 
 **Package Installation Failures**
+
 ```bash
 # Clear npm cache
 npm cache clean --force
