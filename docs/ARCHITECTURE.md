@@ -4,7 +4,7 @@
 
 | Field | Value |
 |-------|-------|
-| **Project Name** | Family Budget Helper |
+| **Project Name** | MoneyWise |
 | **Document Type** | Software Architecture Document |
 | **Version** | 1.0 |
 | **Date** | July 15, 2025 |
@@ -150,30 +150,59 @@ The proposed solution aims to automate these processes while providing intellige
 The system implements a three-tier web architecture with clear separation between presentation, application logic, and data storage layers.
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                 PRESENTATION LAYER                      │
-├─────────────────────────────────────────────────────────┤
-│    React Web App    │    Progressive Web App (PWA)     │
-│   (Desktop/Tablet)  │         (Mobile)                 │
+┌────────────────────────────────────────────────────────┐
+│                    USER'S BROWSER                      │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │            REACT APPLICATION                    │   │
+│  │  (MoneyWise Frontend - TypeScript + Tailwind)   │   │
+│  │                                                 │   │
+│  │  • Budget Dashboard                             │   │
+│  │  • Transaction Forms                            │   │
+│  │  • CSV Upload Interface                         │   │
+│  │  • AI Chat Interface                            │   │
+│  │  • Charts & Visualizations                      │   │
+│  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                                │
-                               │ HTTPS/REST API
+                               │ HTTPS/REST API Calls
+                               │ (JSON requests/responses)
                                ▼
 ┌─────────────────────────────────────────────────────────┐
-│                APPLICATION LAYER                        │
-├─────────────────────────────────────────────────────────┤
-│              Node.js + Express Server                  │
-│  Authentication │ File Processing │ AI Integration     │
+│                   EXPRESS.JS SERVER                     │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │            API ENDPOINTS                        │   │
+│  │  • POST /api/auth/login                         │   │
+│  │  • GET  /api/budgets                            │   │
+│  │  • POST /api/transactions                       │   │
+│  │  • POST /api/upload/csv                         │   │
+│  │  • POST /api/ai/insights                        │   │
+│  └─────────────────────────────────────────────────┘   │
+│  ┌─────────────────────────────────────────────────┐   │
+│  │           BUSINESS LOGIC                        │   │
+│  │  • Authentication & JWT tokens                  │   │
+│  │  • Budget calculations                          │   │
+│  │  • CSV parsing & categorization                 │   │
+│  │  • AI prompt engineering                        │   │
+│  └─────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────┘
                                │
                                ▼
 ┌─────────────────────────────────────────────────────────┐
-│                   DATA LAYER                            │
-├─────────────────────────────────────────────────────────┤
-│  PostgreSQL DB  │  File Storage  │  Redis Cache        │
-│  (User Data,    │  (CSV Files,   │  (Sessions,         │
-│   Transactions) │   Exports)     │   AI Responses)     │
+│                    DATA LAYER                           │
+│                                                         │
+│  ┌──────────────┐  ┌─────────────┐  ┌────────────────┐ │
+│  │ PostgreSQL   │  │   Redis     │  │  OpenAI API    │ │
+│  │   Database   │  │   Cache     │  │   (GPT-4)      │ │
+│  │              │  │             │  │                │ │
+│  │ • Users      │  │ • Sessions  │  │ • AI Insights  │ │
+│  │ • Budgets    │  │ • API Cache │  │ • Smart        │ │
+│  │ • Categories │  │ • Rate      │  │   Suggestions  │ │
+│  │ • Trans-     │  │   Limiting  │  │ • Natural      │ │
+│  │   actions    │  │             │  │   Language     │ │
+│  │ • AI Convos  │  │             │  │   Processing   │ │
+│  └──────────────┘  └─────────────┘  └────────────────┘ │
 └─────────────────────────────────────────────────────────┘
+
 ```
 
 ### 3.2 Component Architecture
@@ -537,11 +566,3 @@ The system implements a three-tier web architecture with clear separation betwee
 - Identify opportunities for budget optimization
 - Create sustainable system for long-term financial tracking
 - Build foundation for advanced financial planning
-
-## Conclusion
-
-This architecture document provides a comprehensive blueprint for developing a family-focused budgeting application that balances functionality, maintainability, and learning opportunities. The proposed system will address real family needs while serving as a practical learning project in modern web development.
-
-The architecture prioritizes simplicity and maintainability while incorporating modern technologies and best practices. The phased development approach ensures steady progress toward a useful family tool while building technical skills progressively.
-
-Success will be measured not only by technical implementation but by actual family adoption and the time savings achieved in day-to-day budget management tasks.
