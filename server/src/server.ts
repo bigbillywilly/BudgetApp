@@ -1,38 +1,25 @@
 import app from './app';
 import { config } from './config/environment';
-import { database } from './database/connection';
 
 const startServer = async (): Promise<void> => {
   try {
-    // Test database connection
-    const dbConnected = await database.testConnection();
-    if (!dbConnected) {
-      console.error('Failed to connect to database. Exiting...');
-      process.exit(1);
-    }
+    console.log('Starting server without database...');
 
     // Start the server
     const server = app.listen(config.PORT, () => {
-      console.log(`🚀 Server running on port ${config.PORT}`);
-      console.log(`📊 Environment: ${config.NODE_ENV}`);
-      console.log(`🔗 Health check: http://localhost:${config.PORT}/health`);
+      console.log(`Server running on port ${config.PORT}`);
+      console.log(`Environment: ${config.NODE_ENV}`);
+      console.log(`Health check: http://localhost:${config.PORT}/health`);
+      console.log(`API test: http://localhost:${config.PORT}/api/test`);
     });
 
     // Graceful shutdown
-    const gracefulShutdown = async (signal: string): Promise<void> => {
+    const gracefulShutdown = (signal: string): void => {
       console.log(`\n${signal} received. Starting graceful shutdown...`);
       
-      server.close(async () => {
+      server.close(() => {
         console.log('HTTP server closed');
-        
-        try {
-          await database.close();
-          console.log('Database connections closed');
-          process.exit(0);
-        } catch (error) {
-          console.error('Error during shutdown:', error);
-          process.exit(1);
-        }
+        process.exit(0);
       });
     };
 

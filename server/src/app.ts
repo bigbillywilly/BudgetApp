@@ -4,13 +4,11 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import { config, isDevelopment } from './config/environment';
 
-// Import middleware (we'll create these next)
-import { errorHandler } from './middleware/errorHandler';
-import { notFoundHandler } from './middleware/errorHandler';
+// Import middleware
+import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 
-// Import routes (we'll create these later)
-// import { authRoutes } from './routes/auth.routes';
-// import { userRoutes } from './routes/user.routes';
+// Import routes
+import userRoutes from './routes/user.routes';
 
 const app = express();
 
@@ -44,9 +42,16 @@ app.get('/health', (req, res) => {
   });
 });
 
-// API routes (we'll add these later)
-// app.use('/api/auth', authRoutes);
-// app.use('/api/user', userRoutes);
+// API test endpoint
+app.get('/api/test', (req, res) => {
+  res.json({
+    message: 'API is working!',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// API routes
+app.use('/api/user', userRoutes);
 
 // 404 handler
 app.use(notFoundHandler);
