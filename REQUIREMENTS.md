@@ -1,362 +1,280 @@
-# Technical Requirements
+# MoneyWise - Technical Requirements Document
 
-## System Requirements
+## Project Overview
+
+MoneyWise is a full-stack personal finance tracking application designed to help users manage their monthly budgets, analyze spending patterns, and receive AI-powered financial advice. The application demonstrates modern web development practices with a clean architecture suitable for enterprise-level applications.
+
+## Business Requirements
+
+### Primary Goals
+- **Budget Management**: Enable users to track monthly income, expenses, and savings goals
+- **Expense Analysis**: Provide insights into spending patterns through CSV import and categorization
+- **Financial Guidance**: Offer AI-powered advice and recommendations
+- **Historical Tracking**: Allow users to view and compare financial data across months
+- **User Experience**: Deliver an intuitive, responsive interface across all devices
+
+### Target Users
+- Individuals seeking better financial management
+- Users comfortable with digital financial tools
+- People who want to analyze bank/credit card statements
+- Those looking for AI-assisted financial advice
+
+## System Architecture
+
+### Architecture Pattern
+- **Frontend**: Component-based architecture with React and TypeScript
+- **Backend**: RESTful API with Express.js and Node.js
+- **Database**: PostgreSQL for relational data with Redis for caching
+- **Authentication**: JWT-based stateless authentication
+- **File Processing**: Server-side CSV parsing and analysis
+
+### Design Principles
+- **Separation of Concerns**: Clear boundaries between UI, business logic, and data layers
+- **Scalability**: Modular architecture supporting horizontal scaling
+- **Maintainability**: TypeScript throughout for type safety and better developer experience
+- **Security**: Secure handling of financial data with encryption and validation
+- **Performance**: Optimized loading times with caching strategies
+
+## Technical Requirements
+
+### Frontend Requirements
+
+#### Core Technologies
+- **React 18+** with functional components and hooks
+- **TypeScript 4.9+** for type safety
+- **Tailwind CSS 3+** for styling and responsive design
+- **Vite** for fast development and building
+- **Papa Parse** for client-side CSV processing
+
+#### Browser Support
+- Chrome 90+
+- Firefox 88+
+- Safari 14+
+- Edge 90+
+- Mobile browsers (iOS Safari, Chrome Mobile)
+
+#### Performance Requirements
+- **First Contentful Paint**: < 1.5 seconds
+- **Time to Interactive**: < 3 seconds
+- **Bundle Size**: < 1MB compressed
+- **Accessibility**: WCAG 2.1 AA compliance
+
+### Backend Requirements
+
+#### Core Technologies
+- **Node.js 18+** with Express.js framework
+- **TypeScript 4.9+** for server-side development
+- **PostgreSQL 14+** as primary database
+- **Redis 7+** for caching and session management
+- **JWT** for authentication tokens
+
+#### API Specifications
+- **RESTful API** following OpenAPI 3.0 specification
+- **JSON** request/response format
+- **HTTP Status Codes** following semantic conventions
+- **Rate Limiting** to prevent abuse
+- **Request Validation** using middleware
+
+#### Security Requirements
+- **HTTPS** enforced in production
+- **CORS** properly configured
+- **Input Validation** and sanitization
+- **SQL Injection** protection through parameterized queries
+- **XSS Protection** with proper header configuration
+- **Password Hashing** using bcrypt
+- **JWT Secret** rotation capability
+
+### Database Requirements
+
+#### PostgreSQL Schema
+```sql
+-- Users table
+users (
+  id UUID PRIMARY KEY,
+  username VARCHAR(50) UNIQUE NOT NULL,
+  email VARCHAR(100) UNIQUE NOT NULL,
+  password_hash VARCHAR(255) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Monthly financial data
+monthly_data (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  month_year VARCHAR(7) NOT NULL, -- Format: YYYY-MM
+  income DECIMAL(10,2) DEFAULT 0,
+  fixed_expenses DECIMAL(10,2) DEFAULT 0,
+  savings_goal DECIMAL(10,2) DEFAULT 0,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Transactions from CSV uploads
+transactions (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  monthly_data_id UUID REFERENCES monthly_data(id),
+  date DATE NOT NULL,
+  description TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  category VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Chat messages with AI
+chat_messages (
+  id UUID PRIMARY KEY,
+  user_id UUID REFERENCES users(id),
+  monthly_data_id UUID REFERENCES monthly_data(id),
+  message_type VARCHAR(10) NOT NULL, -- 'user' or 'bot'
+  message_content TEXT NOT NULL,
+  timestamp TIMESTAMP DEFAULT NOW()
+);
+```
+
+#### Data Relationships
+- One-to-Many: User → Monthly Data
+- One-to-Many: Monthly Data → Transactions
+- One-to-Many: User → Chat Messages
+- Indexes on user_id, month_year, and date fields for performance
+
+## Functional Requirements
+
+### User Management
+- **FR-001**: User registration with email and username
+- **FR-002**: Secure user authentication and authorization
+- **FR-003**: Password reset functionality
+- **FR-004**: User profile management
+
+### Financial Data Management
+- **FR-005**: Create and update monthly financial data (income, expenses, savings)
+- **FR-006**: View historical financial data by month
+- **FR-007**: Calculate available spending money automatically
+- **FR-008**: Data persistence across browser sessions
+
+### CSV Processing
+- **FR-009**: Upload and parse CSV files from banks/credit cards
+- **FR-010**: Automatic transaction categorization based on descriptions
+- **FR-011**: Manual category correction and customization
+- **FR-012**: Display spending breakdown by category
+- **FR-013**: Support for multiple CSV formats (Chase, Bank of America, etc.)
+
+### AI Financial Advisor
+- **FR-014**: Interactive chat interface with AI assistant
+- **FR-015**: Contextual financial advice based on user data
+- **FR-016**: Pre-built quick questions for common scenarios
+- **FR-017**: Chat history preservation and retrieval
+
+### Analytics and Insights
+- **FR-018**: Monthly spending comparisons
+- **FR-019**: Category-wise spending trends
+- **FR-020**: Budget vs. actual spending analysis
+- **FR-021**: Savings progress tracking
+
+## Non-Functional Requirements
+
+### Performance
+- **NFR-001**: API response time < 200ms for most endpoints
+- **NFR-002**: Database queries < 100ms average response time
+- **NFR-003**: Support for 1000+ concurrent users
+- **NFR-004**: Client-side CSV processing for files up to 10MB
+
+### Scalability
+- **NFR-005**: Horizontal scaling capability for web servers
+- **NFR-006**: Database connection pooling for efficient resource usage
+- **NFR-007**: Redis caching for frequently accessed data
+- **NFR-008**: CDN integration for static assets
+
+### Reliability
+- **NFR-009**: 99.9% uptime availability
+- **NFR-010**: Graceful error handling and user feedback
+- **NFR-011**: Automatic backup of user data
+- **NFR-012**: Transaction rollback capability for data integrity
+
+### Security
+- **NFR-013**: End-to-end encryption for sensitive data
+- **NFR-014**: Regular security audits and vulnerability assessments
+- **NFR-015**: GDPR compliance for user data handling
+- **NFR-016**: Secure file upload with virus scanning
+
+### Usability
+- **NFR-017**: Mobile-responsive design for all screen sizes
+- **NFR-018**: Intuitive navigation with < 3 clicks to any feature
+- **NFR-019**: Accessibility compliance (WCAG 2.1 AA)
+- **NFR-020**: Progressive web app capabilities
+
+## Development Requirements
 
 ### Development Environment
+- **Node.js 18+** and npm/yarn package manager
+- **PostgreSQL 14+** local installation or Docker container
+- **Redis 7+** for development caching
+- **Git** for version control
+- **VS Code** or similar IDE with TypeScript support
 
-- **Operating System:** Windows 10+, macOS 12+, or Ubuntu 20.04+
-- **Memory:** 8GB RAM minimum, 16GB recommended
-- **Storage:** 10GB free space for development environment
-- **Network:** Stable internet connection for package downloads and AI API calls
+### Code Quality
+- **ESLint** and **Prettier** for code formatting
+- **Husky** for pre-commit hooks
+- **Jest** and **React Testing Library** for testing
+- **TypeScript strict mode** enabled
+- **Code coverage** minimum 80% for critical paths
 
-### Required Software
+### Deployment
+- **Docker** containerization for production deployment
+- **CI/CD pipeline** with GitHub Actions or similar
+- **Environment-based configuration** (dev, staging, production)
+- **Health checks** and monitoring endpoints
+- **Log aggregation** and error tracking
 
-- **Node.js:** 20.15.1 LTS
-- **npm:** 10.7.0+ (included with Node.js)
-- **Git:** Latest stable version
-- **Docker Desktop:** Latest stable version
-- **Code Editor:** Visual Studio Code (recommended)
-
-### Browser Support
-
-- **Chrome:** 100+
-- **Firefox:** 100+
-- **Safari:** 15+
-- **Edge:** 100+
-
-## Package Dependencies
+## Dependencies
 
 ### Frontend Dependencies
-
 ```json
 {
-  "react": "^18.3.1",
-  "react-dom": "^18.3.1",
-  "@types/react": "^18.3.3",
-  "@types/react-dom": "^18.3.0",
-  "typescript": "^5.5.3",
-  "vite": "^5.3.3",
-  "zustand": "^4.5.4",
-  "@tanstack/react-query": "^5.51.1",
-  "axios": "^1.7.2",
-  "tailwindcss": "^3.4.6",
-  "@headlessui/react": "^2.1.2",
-  "lucide-react": "^0.263.1"
+  "react": "^18.2.0",
+  "typescript": "^4.9.5",
+  "tailwindcss": "^3.3.0",
+  "lucide-react": "^0.263.1",
+  "papaparse": "^5.4.1"
 }
 ```
 
 ### Backend Dependencies
-
 ```json
 {
-  "express": "^4.19.2",
-  "typescript": "^5.5.3",
-  "@types/express": "^4.17.21",
-  "@types/node": "^20.14.10",
-  "prisma": "^5.16.2",
-  "@prisma/client": "^5.16.2",
-  "openai": "^4.53.0",
-  "jsonwebtoken": "^9.0.2",
+  "express": "^4.18.2",
+  "typescript": "^4.9.5",
+  "pg": "^8.8.0",
+  "redis": "^4.5.1",
+  "jsonwebtoken": "^9.0.0",
   "bcryptjs": "^2.4.3",
-  "cors": "^2.8.5",
-  "redis": "^4.6.14",
   "multer": "^1.4.5",
-  "csv-parser": "^3.0.0"
+  "helmet": "^6.0.1",
+  "cors": "^2.8.5"
 }
 ```
 
-### Development Dependencies
-
-```json
-{
-  "nodemon": "^3.1.4",
-  "ts-node": "^10.9.2",
-  "jest": "^29.7.0",
-  "@testing-library/react": "^16.0.0",
-  "eslint": "^8.57.0",
-  "prettier": "^3.3.2",
-  "concurrently": "^8.2.2"
-}
-```
-
-## Infrastructure Requirements
-
-### Database
-
-- **PostgreSQL:** 16.x
-- **Redis:** 7.2.x
-
-### External Services
-
-- **OpenAI API:** GPT-4 access required
-- **Cloud Storage:** For file uploads (development: local storage)
-
-### Development Infrastructure
-
-```yaml
-# Docker Compose Services
-services:
-  postgres:
-    image: postgres:16
-    environment:
-      POSTGRES_DB: family_budget
-      POSTGRES_USER: dev_user
-      POSTGRES_PASSWORD: dev_password
-    ports:
-      - '5432:5432'
-
-  redis:
-    image: redis:7.2-alpine
-    ports:
-      - '6379:6379'
-```
-
-## Environment Variables
-
-### Required Environment Variables
-
-```env
-# Database Connection
-DATABASE_URL="postgresql://dev_user:dev_password@localhost:5432/family_budget"
-
-# Cache/Session Storage
-REDIS_URL="redis://localhost:6379"
-
-# Authentication
-JWT_SECRET="your-256-bit-secret-key"
-JWT_REFRESH_SECRET="your-256-bit-refresh-secret"
-JWT_EXPIRES_IN="15m"
-JWT_REFRESH_EXPIRES_IN="7d"
-
-# AI Integration
-OPENAI_API_KEY="sk-your-openai-api-key"
-OPENAI_MODEL="gpt-4"
-
-# File Upload
-MAX_FILE_SIZE=10485760
-ALLOWED_FILE_TYPES="text/csv,application/csv"
-UPLOAD_DIRECTORY="./uploads"
-
-# Application Configuration
-NODE_ENV="development"
-PORT=3000
-CORS_ORIGIN="http://localhost:5173"
-API_RATE_LIMIT=100
-
-# Frontend Configuration
-VITE_API_URL="http://localhost:3000"
-VITE_APP_NAME="Family Budget Helper"
-VITE_MAX_FILE_SIZE=10485760
-```
-
-## Performance Requirements
-
-### Response Time Targets
-
-- **Page Load:** < 2 seconds on 3G connection
-- **API Response:** < 500ms for standard requests
-- **File Upload Processing:** < 30 seconds for typical bank statements
-- **AI Insight Generation:** < 5 seconds
-- **Database Queries:** < 100ms for standard operations
-
-### Scalability Requirements
-
-- **Concurrent Users:** Support 10+ simultaneous users
-- **Data Volume:** Handle 10,000+ transactions per user
-- **File Processing:** Support CSV files up to 10MB
-- **Memory Usage:** < 512MB per Node.js process
-
-## Security Requirements
-
-### Authentication & Authorization
-
-- **Password Policy:** Minimum 8 characters, mixed case, numbers, symbols
-- **Session Management:** JWT with 15-minute expiry, 7-day refresh tokens
-- **Rate Limiting:** 100 requests per minute per IP
-- **CORS Policy:** Restricted to development/production domains
-
-### Data Protection
-
-- **Encryption in Transit:** HTTPS/TLS 1.3 for all communications
-- **Encryption at Rest:** Database column encryption for sensitive data
-- **Input Validation:** All user inputs validated and sanitized
-- **File Upload Security:** Virus scanning, type validation, size limits
-
-### Privacy Requirements
-
-- **Data Minimization:** Collect only necessary financial data
-- **Local Processing:** AI insights processed without storing personal data
-- **Data Retention:** User-controlled data deletion
-- **No Third-Party Analytics:** Privacy-first approach
-
-## Testing Requirements
-
-### Test Coverage Targets
-
-- **Unit Tests:** 80%+ code coverage
-- **Integration Tests:** All API endpoints tested
-- **End-to-End Tests:** Critical user journeys automated
-- **Performance Tests:** Load testing with realistic data volumes
-
-### Required Test Types
-
-- **Unit Testing:** Jest for business logic
-- **Component Testing:** React Testing Library
-- **API Testing:** Supertest for Express endpoints
-- **E2E Testing:** Playwright for user workflows
-- **Security Testing:** OWASP dependency scanning
-
-## Development Tools
-
-### Required IDE Extensions (VS Code)
-
-```json
-{
-  "recommendations": [
-    "ms-vscode.vscode-typescript-next",
-    "esbenp.prettier-vscode",
-    "ms-vscode.eslint",
-    "bradlc.vscode-tailwindcss",
-    "prisma.prisma",
-    "ms-vscode-remote.remote-containers"
-  ]
-}
-```
-
-### Code Quality Standards
-
-- **TypeScript:** Strict mode enabled
-- **ESLint:** Airbnb configuration with TypeScript rules
-- **Prettier:** Consistent code formatting
-- **Husky:** Pre-commit hooks for quality checks
-- **Conventional Commits:** Standardized commit messages
-
-## Deployment Requirements
-
-### Development Environment
-
-- **Hot Reload:** Sub-2-second refresh times
-- **Docker Compose:** One-command development setup
-- **Environment Isolation:** Containerized services
-
-### Production Environment (Future)
-
-- **Frontend Hosting:** Vercel or similar CDN-enabled platform
-- **Backend Hosting:** Railway, Heroku, or similar Node.js platform
-- **Database:** Managed PostgreSQL service
-- **Monitoring:** Error tracking and performance monitoring
-
-## Compatibility Matrix
-
-### Node.js Version Compatibility
-
-```
-Node.js 20.15.1 LTS: ✅ Recommended
-Node.js 18.x LTS:    ✅ Supported
-Node.js 22.x:        ⚠️  Not tested
-Node.js < 18:        ❌ Not supported
-```
-
-### Package Manager Compatibility
-
-```
-npm 10.x:  ✅ Recommended
-npm 9.x:   ✅ Supported
-yarn:      ⚠️  Not tested
-pnpm:      ⚠️  Not tested
-```
-
-### Database Version Compatibility
-
-```
-PostgreSQL 16.x: ✅ Recommended
-PostgreSQL 15.x: ✅ Supported
-PostgreSQL 14.x: ⚠️  Minimum supported
-PostgreSQL < 14: ❌ Not supported
-```
-
-## Installation Verification
-
-### System Check Commands
-
-```bash
-# Verify Node.js version
-node --version
-# Expected: v20.15.1
-
-# Verify npm version
-npm --version
-# Expected: 10.7.0+
-
-# Verify Docker
-docker --version
-# Expected: 20.x+
-
-# Verify Git
-git --version
-# Expected: 2.x+
-```
-
-### Project Setup Verification
-
-```bash
-# Install dependencies
-npm run setup
-
-# Start development environment
-npm run dev:full
-
-# Run health checks
-curl http://localhost:3000/api/health
-# Expected: {"status": "ok", "timestamp": "..."}
-
-curl http://localhost:5173
-# Expected: React application loads
-```
-
-## Troubleshooting
-
-### Common Issues
-
-**Node.js Version Mismatch**
-
-```bash
-# Use Node Version Manager (recommended)
-nvm install 20.15.1
-nvm use 20.15.1
-```
-
-**Docker Services Not Starting**
-
-```bash
-# Reset Docker environment
-docker-compose down -v
-docker-compose up -d
-```
-
-**Database Connection Issues**
-
-```bash
-# Verify PostgreSQL is running
-docker ps | grep postgres
-
-# Check connection
-npm run db:studio
-```
-
-**Package Installation Failures**
-
-```bash
-# Clear npm cache
-npm cache clean --force
-
-# Delete node_modules and reinstall
-rm -rf node_modules package-lock.json
-npm install
-```
+## Success Metrics
+
+### Technical Metrics
+- **Code Quality**: TypeScript coverage > 95%
+- **Performance**: Core Web Vitals in "Good" range
+- **Testing**: Unit test coverage > 80%
+- **Security**: Zero high-severity vulnerabilities
+
+### User Experience Metrics
+- **Usability**: Task completion rate > 90%
+- **Performance**: Page load time < 3 seconds
+- **Accessibility**: WCAG 2.1 AA compliance score
+- **Mobile Experience**: Responsive design on all devices
+
+### Business Metrics
+- **Data Accuracy**: CSV parsing accuracy > 95%
+- **User Engagement**: Average session duration > 5 minutes
+- **Feature Adoption**: Core features used by > 80% of users
+- **Error Rate**: Application errors < 1% of requests
 
 ---
 
-**Document Version:** 1.0  
-**Last Updated:** July 16, 2025  
-**Maintained By:** Development Team
+This requirements document serves as the foundation for the MoneyWise application development and will be updated as the project evolves.

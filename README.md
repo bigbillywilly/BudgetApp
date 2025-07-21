@@ -1,196 +1,217 @@
 # MoneyWise
 
-A smart web application that helps families manage their budgets with AI-powered insights and automated expense tracking.
+A full-stack personal finance tracking application built with React, TypeScript, and Node.js. MoneyWise helps users manage their monthly budgets, track expenses through CSV uploads, and get AI-powered financial advice.
 
-## What is MoneyWise?
+![MoneyWise Dashboard](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=MoneyWise+Dashboard+Screenshot)
 
-MoneyWise transforms family budget management by automating expense tracking and providing intelligent financial insights. Access everything through your web browser - no downloads required.
+## Features
 
-**Website:** [moneywise.com](https://moneywise.com) *(coming soon)*  
-**Mobile Apps:** iOS and Android versions launching in 2026
+### Financial Management
+- **Monthly Budget Tracking** - Set income, fixed expenses, and savings goals
+- **Real-time Calculations** - Automatically calculate available spending money
+- **Historical Data** - View and analyze previous months' financial data
+- **Data Persistence** - Secure local storage with migration path to cloud database
 
-## Key Features
+### Expense Analysis
+- **CSV Import** - Upload bank statements and credit card exports
+- **Smart Categorization** - Automatic transaction categorization using AI
+- **Spending Breakdown** - Visual representation of spending by category
+- **Transaction History** - Detailed view of all imported transactions
 
-- **Smart Budget Creation** - Set up monthly and yearly budgets with custom categories
-- **Automated Expense Tracking** - Upload bank statements (CSV) for automatic categorization
-- **AI Financial Insights** - Ask "Where can we save money?" and get personalized recommendations
-- **Mobile-Responsive** - Full functionality on any device through your browser
-- **Family-Focused** - Designed specifically for household budget management
-- **Secure & Private** - Bank-level security with no data sharing
+### AI Financial Advisor
+- **Personalized Advice** - Get financial recommendations based on your data
+- **Interactive Chat** - Ask questions about budgeting, investing, and saving
+- **Quick Questions** - Pre-built prompts for common financial topics
+- **Chat History** - Access previous conversations and advice
 
-## Getting Started
+### Architecture & Technical Features
+- **Clean Architecture** - Separation of concerns with service layer pattern
+- **TypeScript** - Full type safety across frontend and backend
+- **Responsive Design** - Mobile-first design with Tailwind CSS
+- **Component-Based** - Reusable React components with modern hooks
+- **API-Ready** - Backend-ready architecture with easy migration path
 
-1. **Visit** [moneywise.com](https://moneywise.com)
-2. **Create account** with email and password
-3. **Set up budget** with income and expense categories
-4. **Track expenses** manually or upload CSV files
-5. **Get AI insights** about your spending patterns
+## Tech Stack
 
-## Why MoneyWise?
+### Frontend
+- **React 18** - Modern React with hooks and functional components
+- **TypeScript** - Type-safe development
+- **Tailwind CSS** - Utility-first CSS framework
+- **Lucide React** - Beautiful SVG icons
+- **Papa Parse** - Robust CSV parsing library
+- **Vite** - Fast build tool and development server
 
-### **Instant Access**
-- Works in any web browser (Chrome, Firefox, Safari, Edge)
-- No app installation required
-- Automatic updates with new features
-- Access from desktop, tablet, or mobile
+### Backend (In Development)
+- **Node.js** - JavaScript runtime
+- **Express.js** - Web application framework
+- **TypeScript** - Type-safe backend development
+- **PostgreSQL** - Relational database for user data
+- **Redis** - Caching and session management
+- **JWT** - Secure authentication
+- **Multer** - File upload handling
 
-### **AI-Powered Intelligence**
-- Natural language queries: "How much did we spend on groceries?"
-- Personalized saving recommendations
-- Automatic transaction categorization
-- Spending pattern analysis and optimization
+### Development Tools
+- **ESLint** - Code linting
+- **Prettier** - Code formatting
+- **Git** - Version control
+- **Docker** - Containerization (coming soon)
 
-### **Family-Centered**
-- Built for household budget management
-- Multiple budget types (monthly, yearly, project-based)
-- Collaborative expense tracking
-- Privacy-first approach
+## Prerequisites
 
-## Technology
+- Node.js (v16 or higher)
+- npm or yarn
+- Git
 
-**Built with modern, reliable technology:**
-- React + TypeScript frontend for fast, reliable performance
-- Node.js + Express backend for secure API responses
-- PostgreSQL database for financial data integrity
-- OpenAI GPT-4 integration for intelligent insights
+## Quick Start
 
-**Performance:** Page loads under 2 seconds, 99.9% uptime, bank-level security
+### 1. Clone the Repository
+```bash
+git clone https://github.com/yourusername/moneywise.git
+cd moneywise
+```
+
+### 2. Install Client Dependencies
+```bash
+cd client
+npm install
+```
+
+### 3. Start Development Server
+```bash
+npm run dev
+```
+
+### 4. Open in Browser
+Navigate to `http://localhost:5173`
+
+## Project Structure
+
+```
+moneywise/
+├── client/                          # React Frontend Application
+│   ├── src/
+│   │   ├── components/              # Reusable UI Components
+│   │   │   ├── common/              # Shared components
+│   │   │   ├── dashboard/           # Dashboard-specific components
+│   │   │   ├── history/             # Historical data components
+│   │   │   └── chat/                # AI chat components
+│   │   ├── services/                # API and data services
+│   │   ├── hooks/                   # Custom React hooks
+│   │   ├── utils/                   # Helper functions
+│   │   ├── types/                   # TypeScript type definitions
+│   │   └── pages/                   # Main page components
+│   └── package.json
+├── server/                          # Node.js Backend API
+│   ├── src/
+│   │   ├── controllers/             # Route handlers
+│   │   ├── services/                # Business logic
+│   │   ├── models/                  # Database models
+│   │   ├── routes/                  # API routes
+│   │   ├── middleware/              # Custom middleware
+│   │   ├── database/                # Database configuration
+│   │   └── utils/                   # Backend utilities
+│   └── package.json
+├── shared/                          # Shared types and utilities
+└── docs/                           # Documentation
+```
+
+## Usage
+
+### Dashboard
+1. Enter your monthly income in the first card
+2. Add your fixed expenses (rent, utilities, etc.)
+3. Set your savings goal
+4. View your available spending money automatically calculated
+
+### CSV Upload
+1. Click "Upload Expenses" on the dashboard
+2. Select a CSV file from your bank or credit card
+3. Watch as transactions are automatically categorized
+4. View spending breakdown by category
+
+### Previous Months
+1. Click "Previous Months" in the navigation
+2. Select a month from the dropdown
+3. View historical financial data and patterns
+4. Compare spending across different months
+
+### AI Advisor
+1. Navigate to the "AI Advisor" tab
+2. Ask questions about your finances
+3. Use quick question buttons for common topics
+4. Get personalized advice based on your spending patterns
+
+## 🧪 Testing
+
+```bash
+# Run frontend tests
+cd client
+npm test
+
+# Run backend tests (when implemented)
+cd server
+npm test
+```
 
 ## Roadmap
 
-- **2025 July:** Core budgeting and AI insights
-- **2025 July:** Advanced visualizations and mobile optimization
-- **2025 August:** Enhanced AI features and data export
-- **2026:** Native mobile apps for iOS and Android
+### Phase 1 - Core Features (Current)
+- [x] Basic financial tracking
+- [x] CSV upload and parsing
+- [x] Historical data view
+- [x] Local data persistence
+- [x] Responsive design
 
-## Architecture
-┌─────────────────────────────────────────────────────────┐
-│                    USER'S BROWSER                       │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │            REACT APPLICATION                    │   │
-│  │  (MoneyWise Frontend - TypeScript + Tailwind)  │   │
-│  │                                                 │   │
-│  │  • Budget Dashboard                             │   │
-│  │  • Transaction Forms                            │   │
-│  │  • CSV Upload Interface                         │   │
-│  │  • AI Chat Interface                            │   │
-│  │  • Charts & Visualizations                      │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                               │
-                               │ HTTPS/REST API Calls
-                               │ (JSON requests/responses)
-                               ▼
-┌─────────────────────────────────────────────────────────┐
-│                   EXPRESS.JS SERVER                     │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │            API ENDPOINTS                        │   │
-│  │  • POST /api/auth/login                         │   │
-│  │  • GET  /api/budgets                            │   │
-│  │  • POST /api/transactions                       │   │
-│  │  • POST /api/upload/csv                         │   │
-│  │  • POST /api/ai/insights                        │   │
-│  └─────────────────────────────────────────────────┘   │
-│  ┌─────────────────────────────────────────────────┐   │
-│  │           BUSINESS LOGIC                        │   │
-│  │  • Authentication & JWT tokens                  │   │
-│  │  • Budget calculations                          │   │
-│  │  • CSV parsing & categorization                 │   │
-│  │  • AI prompt engineering                        │   │
-│  └─────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
-                               │
-                               ▼
-┌─────────────────────────────────────────────────────────┐
-│                    DATA LAYER                           │
-│                                                         │
-│  ┌──────────────┐  ┌─────────────┐  ┌────────────────┐ │
-│  │ PostgreSQL   │  │   Redis     │  │  OpenAI API    │ │
-│  │   Database   │  │   Cache     │  │   (GPT-4)      │ │
-│  │              │  │             │  │                │ │
-│  │ • Users      │  │ • Sessions  │  │ • AI Insights  │ │
-│  │ • Budgets    │  │ • API Cache │  │ • Smart        │ │
-│  │ • Categories │  │ • Rate      │  │   Suggestions  │ │
-│  │ • Trans-     │  │   Limiting  │  │ • Natural      │ │
-│  │   actions    │  │             │  │   Language     │ │
-│  │ • AI Convos  │  │             │  │   Processing   │ │
-│  └──────────────┘  └─────────────┘  └────────────────┘ │
-└─────────────────────────────────────────────────────────┘
+### Phase 2 - Backend Integration (In Progress)
+- [ ] User authentication system
+- [ ] PostgreSQL database setup
+- [ ] RESTful API endpoints
+- [ ] Data migration from localStorage
+- [ ] Enhanced security features
 
-## How It Works
-### How MoneyWise Works
+### Phase 3 - Advanced Features
+- [ ] Real AI integration (OpenAI/Anthropic)
+- [ ] Advanced analytics and insights
+- [ ] Goal tracking and notifications
+- [ ] Export functionality
+- [ ] Multi-currency support
 
-#### User Journey Example: Adding an Expense
-1. **User fills out expense form** in React interface
-2. **React sends API request:** `POST /api/transactions` with expense data
-3. **Express validates and processes** the transaction data
-4. **PostgreSQL stores** the transaction in the database
-5. **Express returns confirmation** to React
-6. **React updates the UI** showing new transaction and updated budget totals
+### Phase 4 - Production
+- [ ] Docker containerization
+- [ ] CI/CD pipeline
+- [ ] Cloud deployment
+- [ ] Performance optimization
+- [ ] Comprehensive testing suite
 
-#### User Journey Example: Getting AI Insights
-1. **User asks question:** "How can I reduce my grocery spending?"
-2. **React sends query** to `POST /api/ai/insights`
-3. **Express analyzes** user's grocery transaction history
-4. **OpenAI generates** personalized recommendations
-5. **Express saves conversation** and returns insights
-6. **React displays AI response** in chat interface
+## Contributing
 
-### Technology Stack
+This is a learning project developed for internship purposes. While not currently accepting contributions, feedback and suggestions are welcome!
 
-#### Frontend (Presentation Layer)
-- **React 18** - Component-based UI framework
-- **TypeScript** - Type safety and developer experience
-- **Tailwind CSS** - Utility-first styling for responsive design
-- **Vite** - Fast development server and optimized builds
-- **Zustand** - Lightweight state management
-- **React Query** - Server state management and caching
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
-#### Backend (Application Layer)
-- **Node.js + Express** - Server runtime and web framework
-- **TypeScript** - Type-safe server development
-- **Prisma ORM** - Type-safe database operations
-- **JWT Authentication** - Secure user sessions
-- **Multer** - File upload handling for CSV imports
-- **OpenAI Integration** - AI-powered financial insights
+## License
 
-#### Data Layer
-- **PostgreSQL** - Primary database for user and financial data
-- **Redis** - Session storage and API response caching
-- **OpenAI API** - Natural language processing for insights
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-### Database Schema
+## Author
 
-Core data entities and relationships:
+**Me**
+- GitHub: [@yourusername](https://github.com/bigbillywiwlly)
 
-```sql
-Users
-├── id, email, password_hash
-├── family_id, created_at
-└── profile information
+## Acknowledgments
 
-Budgets
-├── id, user_id, name
-├── total_amount, period_type
-└── start_date, end_date
+- Built as part of my software engineering learning journey
+- Inspired by modern fintech applications
+- Thanks to the open-source community for the amazing tools and libraries
 
-Categories
-├── id, budget_id, name
-├── allocated_amount, color
-└── category_type (income/expense)
+## Support
 
-Transactions
-├── id, user_id, category_id
-├── amount, description, date
-└── source (manual/imported)
+If you have any questions about this project, feel free to reach out or open an issue!
 
-AI_Conversations
-├── id, user_id, query
-├── response, context
-└── timestamp
+---
 
-## About
-
-MoneyWise was created by Willy to solve real family budgeting challenges through modern technology and AI-powered insights. Built with professional-grade tools and security standards.
-
-**Contact:** hello@moneywise.com
+**MoneyWise** - Making personal finance management simple and intelligent.

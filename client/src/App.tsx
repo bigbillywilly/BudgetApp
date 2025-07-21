@@ -1,5 +1,5 @@
-import { SetStateAction, useState } from 'react';
-import { Upload, DollarSign, TrendingUp, PieChart, AlertCircle, CheckCircle, Sparkles, Target, Wallet, CreditCard, Brain, Send, Bot, User } from 'lucide-react';
+import { SetStateAction, useState, useEffect } from 'react';
+import { Upload, DollarSign, TrendingUp, PieChart, AlertCircle, CheckCircle, Sparkles, Target, Wallet, CreditCard, Brain, Send, Bot, User, History, Calendar, FileText, BarChart3, ChevronDown } from 'lucide-react';
 
 function App() {
     const [currentPage, setCurrentPage] = useState('dashboard');
@@ -8,6 +8,8 @@ function App() {
     const [savingsGoal, setSavingsGoal] = useState('');
     const [csvFile, setCsvFile] = useState<File | null>(null);
     const [isProcessing, setIsProcessing] = useState(false);
+    const [monthlyData, setMonthlyData] = useState<any>({});
+    const [selectedMonth, setSelectedMonth] = useState('');
     const [chatMessages, setChatMessages] = useState([
         {
             type: 'bot',
@@ -18,6 +20,59 @@ function App() {
     const [currentMessage, setCurrentMessage] = useState('');
 
     const availableToSpend = Math.max(0, (parseFloat(income) || 0) - (parseFloat(fixedExpenses) || 0) - (parseFloat(savingsGoal) || 0));
+
+    const getCurrentMonthKey = () => {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    };
+
+    const formatMonthDisplay = (monthKey: string) => {
+        const [year, month] = monthKey.split('-');
+        const date = new Date(parseInt(year), parseInt(month) - 1);
+        return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' });
+    };
+
+    const getPreviousMonths = () => {
+        const currentMonth = getCurrentMonthKey();
+        return Object.keys(monthlyData)
+            .filter(month => month !== currentMonth && monthlyData[month])
+            .sort()
+            .reverse();
+    };
+
+    const calculateHistoricalSpend = (data: any) => {
+        return Math.max(0, (parseFloat(data.income) || 0) - (parseFloat(data.fixedExpenses) || 0) - (parseFloat(data.savingsGoal) || 0));
+    };
+
+    useEffect(() => {
+        const saved = localStorage.getItem('moneywise_data');
+        if (saved) {
+            setMonthlyData(JSON.parse(saved));
+        }
+    }, []);
+
+    useEffect(() => {
+        const currentMonth = getCurrentMonthKey();
+        const currentData = {
+            income,
+            fixedExpenses,
+            savingsGoal,
+            csvFile: csvFile ? { 
+                name: csvFile.name,
+                uploadDate: new Date().toISOString()
+            } : null,
+            chatHistory: chatMessages,
+            lastUpdated: new Date().toISOString()
+        };
+
+        const updatedData = {
+            ...monthlyData,
+            [currentMonth]: currentData
+        };
+
+        setMonthlyData(updatedData);
+        localStorage.setItem('moneywise_data', JSON.stringify(updatedData));
+    }, [income, fixedExpenses, savingsGoal, csvFile, chatMessages]);
 
     const handleSendMessage = () => {
         if (currentMessage.trim()) {
@@ -71,7 +126,8 @@ function App() {
             {/* Animated Background Elements */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none">
                 <div className="absolute -top-40 -right-40 w-80 h-80 bg-gradient-to-br from-gray-300/10 to-gray-400/10 rounded-full blur-3xl animate-pulse"></div>
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-gray-400/10 to-gray-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div></div>
+                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-gray-400/10 to-gray-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
+            </div>
 
             {/* Header */}
             <div className="relative bg-white/80 backdrop-blur-lg shadow-lg border-b border-white/20">
@@ -101,6 +157,16 @@ function App() {
                                         }`}
                                 >
                                     Dashboard
+                                </button>
+                                <button
+                                    onClick={() => setCurrentPage('previous')}
+                                    className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${currentPage === 'previous'
+                                        ? 'bg-purple-500 text-white shadow-lg'
+                                        : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                                        }`}
+                                >
+                                    <History className="w-4 h-4" />
+                                    <span>Previous Months</span>
                                 </button>
                                 <button
                                     onClick={() => setCurrentPage('advisor')}
@@ -282,6 +348,223 @@ function App() {
                             </div>
                         </div>
                     </>
+                ) : currentPage === 'previous' ? (
+                    /* Previous Months Page */
+                    <div className="max-w-6xl mx-auto">
+                        <div className="text-center mb-8">
+                            <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
+                                <History className="w-10 h-10 text-white" />
+                            </div>
+                            <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
+                                Previous Months
+                            </h2>
+                            <p className="text-gray-600 text-lg">Track your financial history and progress over time</p>
+                        </div>
+
+                        {getPreviousMonths().length === 0 ? (
+                            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-12 border border-white/20 text-center">
+                                <div className="w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-3xl flex items-center justify-center mx-auto mb-6">
+                                    <Calendar className="w-12 h-12 text-gray-400" />
+                                </div>
+                                <h3 className="text-xl font-bold text-gray-900 mb-2">No Previous Data</h3>
+                                <p className="text-gray-600 mb-6">Start tracking your finances on the dashboard to see historical data here.</p>
+                                <button
+                                    onClick={() => setCurrentPage('dashboard')}
+                                    className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                >
+                                    <BarChart3 className="w-5 h-5 mr-2" />
+                                    Go to Dashboard
+                                </button>
+                            </div>
+                        ) : (
+                            <>
+                                {/* Month Selector */}
+                                <div className="mb-8">
+                                    <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                                        <div className="flex items-center space-x-4">
+                                            <Calendar className="w-5 h-5 text-gray-600" />
+                                            <span className="text-sm font-medium text-gray-700">Select Month:</span>
+                                            <div className="relative">
+                                                <select
+                                                    value={selectedMonth}
+                                                    onChange={(e) => setSelectedMonth(e.target.value)}
+                                                    className="appearance-none bg-white border border-gray-300 rounded-xl px-4 py-2 pr-8 text-sm font-medium text-gray-700 focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                                >
+                                                    <option value="">Choose a month...</option>
+                                                    {getPreviousMonths().map(month => (
+                                                        <option key={month} value={month}>
+                                                            {formatMonthDisplay(month)}
+                                                        </option>
+                                                    ))}
+                                                </select>
+                                                <ChevronDown className="absolute right-2 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400 pointer-events-none" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Historical Data Display */}
+                                {selectedMonth && monthlyData[selectedMonth] ? (
+                                    <div className="space-y-8">
+                                        {/* Financial Overview for Selected Month */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+                                            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <TrendingUp className="w-5 h-5 text-green-500" />
+                                                    <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Income</p>
+                                                </div>
+                                                <p className="text-3xl font-bold text-gray-900">
+                                                    ${Number(monthlyData[selectedMonth].income || 0).toLocaleString()}
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <AlertCircle className="w-5 h-5 text-red-500" />
+                                                    <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Fixed Expenses</p>
+                                                </div>
+                                                <p className="text-3xl font-bold text-gray-900">
+                                                    ${Number(monthlyData[selectedMonth].fixedExpenses || 0).toLocaleString()}
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <Target className="w-5 h-5 text-blue-500" />
+                                                    <p className="text-sm font-semibold text-gray-600 uppercase tracking-wide">Savings Goal</p>
+                                                </div>
+                                                <p className="text-3xl font-bold text-gray-900">
+                                                    ${Number(monthlyData[selectedMonth].savingsGoal || 0).toLocaleString()}
+                                                </p>
+                                            </div>
+
+                                            <div className="bg-gradient-to-br from-purple-500 to-blue-500 rounded-3xl shadow-xl p-6 border border-white/20 text-white">
+                                                <div className="flex items-center space-x-2 mb-2">
+                                                    <DollarSign className="w-5 h-5 text-white/80" />
+                                                    <p className="text-sm font-semibold text-white/80 uppercase tracking-wide">Available to Spend</p>
+                                                </div>
+                                                <p className="text-3xl font-bold">
+                                                    ${calculateHistoricalSpend(monthlyData[selectedMonth]).toLocaleString()}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        {/* Additional Information */}
+                                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                                            {/* CSV Upload Info */}
+                                            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/20">
+                                                <h3 className="text-xl font-bold text-gray-900 mb-6 flex items-center">
+                                                    <FileText className="w-5 h-5 mr-2 text-blue-500" />
+                                                    Uploaded Files
+                                                </h3>
+                                                {monthlyData[selectedMonth].csvFile ? (
+                                                    <div className="flex items-center space-x-3 p-4 bg-green-50 rounded-2xl border border-green-200">
+                                                        <div className="w-12 h-12 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center">
+                                                            <CheckCircle className="w-6 h-6 text-white" />
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold text-gray-900">
+                                                                {monthlyData[selectedMonth].csvFile.name}
+                                                            </p>
+                                                            <p className="text-sm text-gray-600">
+                                                                Uploaded: {new Date(monthlyData[selectedMonth].csvFile.uploadDate).toLocaleDateString()}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="text-center py-8">
+                                                        <div className="w-16 h-16 bg-gray-200 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                                                            <Bot className="w-8 h-8 text-gray-400" />
+                                                        </div>
+                                                        <p className="text-gray-500">No AI conversations this month</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Last Updated Info */}
+                                        <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
+                                            <div className="flex items-center justify-between text-sm text-gray-600">
+                                                <span>Last updated: {new Date(monthlyData[selectedMonth].lastUpdated).toLocaleString()}</span>
+                                                <span className="flex items-center space-x-1">
+                                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                                                    <span>Data saved locally</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    /* Overview of All Months */
+                                    <div className="space-y-6">
+                                        <h3 className="text-xl font-bold text-gray-900 mb-6">Monthly Overview</h3>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {getPreviousMonths().map(month => {
+                                                const data = monthlyData[month];
+                                                const availableSpend = calculateHistoricalSpend(data);
+                                                return (
+                                                    <div 
+                                                        key={month}
+                                                        className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20 hover:shadow-2xl transition-all duration-300 hover:-translate-y-1 cursor-pointer group"
+                                                        onClick={() => setSelectedMonth(month)}
+                                                    >
+                                                        <div className="flex items-center justify-between mb-4">
+                                                            <h4 className="text-lg font-bold text-gray-900">
+                                                                {formatMonthDisplay(month)}
+                                                            </h4>
+                                                            <div className="w-10 h-10 bg-gradient-to-br from-purple-400 to-blue-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                                                <Calendar className="w-5 h-5 text-white" />
+                                                            </div>
+                                                        </div>
+                                                        
+                                                        <div className="space-y-3">
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm text-gray-600">Income:</span>
+                                                                <span className="font-semibold text-green-600">
+                                                                    ${Number(data.income || 0).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm text-gray-600">Expenses:</span>
+                                                                <span className="font-semibold text-red-600">
+                                                                    ${Number(data.fixedExpenses || 0).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex justify-between items-center">
+                                                                <span className="text-sm text-gray-600">Savings:</span>
+                                                                <span className="font-semibold text-blue-600">
+                                                                    ${Number(data.savingsGoal || 0).toLocaleString()}
+                                                                </span>
+                                                            </div>
+                                                            <div className="pt-2 border-t border-gray-200">
+                                                                <div className="flex justify-between items-center">
+                                                                    <span className="text-sm font-medium text-gray-700">Available:</span>
+                                                                    <span className="font-bold text-lg text-gray-900">
+                                                                        ${availableSpend.toLocaleString()}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        <div className="mt-4 flex items-center justify-between text-xs text-gray-500">
+                                                            <span className="flex items-center space-x-1">
+                                                                {data.csvFile && (
+                                                                    <>
+                                                                        <FileText className="w-3 h-3" />
+                                                                        <span>CSV uploaded</span>
+                                                                    </>
+                                                                )}
+                                                            </span>
+                                                            <span>Click to view details</span>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
                 ) : (
                     /* AI Advisor Page */
                     <div className="max-w-4xl mx-auto">
@@ -359,7 +642,7 @@ function App() {
                             >
                                 <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-gradient-to-br from-green-400 to-emerald-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                        <Target className="w-5 h-5 text-gray" />
+                                        <Target className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
                                         <p className="font-semibold text-gray-900">Emergency Fund</p>
@@ -373,6 +656,9 @@ function App() {
                                 className="p-4 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20 text-left group"
                             >
                                 <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-red-400 to-pink-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                        <CreditCard className="w-5 h-5 text-white" />
+                                    </div>
                                     <div>
                                         <p className="font-semibold text-gray-900">Debt Management</p>
                                         <p className="text-sm text-gray-600">Strategies to become debt-free</p>
@@ -386,7 +672,7 @@ function App() {
                             >
                                 <div className="flex items-center space-x-3">
                                     <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
-                                        <TrendingUp className="w-5 h-5 text-gray-500" />
+                                        <TrendingUp className="w-5 h-5 text-white" />
                                     </div>
                                     <div>
                                         <p className="font-semibold text-gray-900">Investment Advice</p>
@@ -400,6 +686,9 @@ function App() {
                                 className="p-4 bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1 border border-white/20 text-left group"
                             >
                                 <div className="flex items-center space-x-3">
+                                    <div className="w-10 h-10 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform duration-300">
+                                        <Wallet className="w-5 h-5 text-white" />
+                                    </div>
                                     <div>
                                         <p className="font-semibold text-gray-900">Budget Tips</p>
                                         <p className="text-sm text-gray-600">Stay on track with your finances</p>
@@ -415,3 +704,4 @@ function App() {
 }
 
 export default App;
+                                                      
