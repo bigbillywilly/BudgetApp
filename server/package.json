@@ -42,6 +42,7 @@
     "@types/morgan": "^1.9.10",
     "@types/multer": "^2.0.0",
     "@types/node": "^24.0.15",
+    "@types/papaparse": "^5.3.16",
     "@types/pg": "^8.15.4",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",

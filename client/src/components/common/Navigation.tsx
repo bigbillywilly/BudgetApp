@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Sparkles, Brain } from 'lucide-react';
+import { Sparkles, Brain, History } from 'lucide-react';
 
 interface NavigationProps {
-    currentPage: 'dashboard' | 'advisor';
-    setCurrentPage: (page: 'dashboard' | 'advisor') => void;
+    currentPage: 'dashboard' | 'previous' | 'advisor';
+    setCurrentPage: (page: 'dashboard' | 'previous' | 'advisor') => void;
 }
 
 const Navigation = ({ currentPage, setCurrentPage }: NavigationProps) => {
@@ -35,6 +35,16 @@ const Navigation = ({ currentPage, setCurrentPage }: NavigationProps) => {
                                 }`}
                         >
                             Dashboard
+                        </button>
+                        <button
+                            onClick={() => setCurrentPage('previous')}
+                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${currentPage === 'previous'
+                                    ? 'bg-blue-500 text-white shadow-lg'
+                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
+                                }`}
+                        >
+                            <History className="w-4 h-4" />
+                            <span>Previous Months</span>
                         </button>
                         <button
                             onClick={() => setCurrentPage('advisor')}
