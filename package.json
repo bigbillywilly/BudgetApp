@@ -34,7 +34,11 @@
   },
   "homepage": "https://github.com/bigbillywilly/BudgetApp#readme",
   "devDependencies": {
+    "@types/express-rate-limit": "^5.1.3",
     "eslint": "^8.57.1",
     "prettier": "^3.6.2"
+  },
+  "dependencies": {
+    "express-rate-limit": "^8.0.1"
   }
 }

@@ -275,6 +275,16 @@ chat_messages (
 - **Feature Adoption**: Core features used by > 80% of users
 - **Error Rate**: Application errors < 1% of requests
 
----
+npm install --save-dev @types/express-rate-limit
+npm install express-rate-limit
+npm install joi @types/joi
+npm install winston
+npm install --save-dev @types/winston
+npm install bcrypt
+npm install --save-dev @types/bcrypt
+npm install uuid
+npm install --save-dev @types/uuid
+npm install compression
+npm install --save-dev @types/compression
+npm i --save-dev @types/compression
 
-This requirements document serves as the foundation for the MoneyWise application development and will be updated as the project evolves.
