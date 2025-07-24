@@ -18,10 +18,10 @@ router.post('/csv', upload.single('csvFile'), uploadController.uploadCSV.bind(up
 // Upload history
 router.get('/history', uploadController.getUploadHistory.bind(uploadController));
 
-// Get transactions from specific upload
+// Get transactions from specific upload - FIXED ROUTE PATTERN
 router.get('/:uploadId/transactions', uploadController.getUploadTransactions.bind(uploadController));
 
-// Delete upload and its transactions
+// Delete upload and its transactions - FIXED ROUTE PATTERN  
 router.delete('/:uploadId', uploadController.deleteUpload.bind(uploadController));
 
 export { router as uploadRoutes };

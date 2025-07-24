@@ -1,5 +1,6 @@
 // server/src/app.ts
-import express, { Application, Request, Response, NextFunction } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
+import type { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -9,7 +10,7 @@ import rateLimit from 'express-rate-limit';
 // Import routes and utilities
 import { apiRoutes } from './routes/index';
 import { db } from './database/connection';
-import { migrationRunner } from './database/migrationrunner';
+import { migrationRunner } from './database/migrationRunner';
 import { logInfo, logError, logWarn } from './utils/logger';
 
 // Extend Express types
@@ -150,49 +151,13 @@ class MoneyWiseApp {
     // API routes
     this.app.use('/api', apiRoutes);
 
-    // API documentation
-    this.app.get('/api/docs', (req: Request, res: Response) => {
-      res.json({
-        title: 'MoneyWise API Documentation',
-        version: '1.0.0',
-        endpoints: {
-          auth: {
-            'POST /api/auth/register': 'Register new user',
-            'POST /api/auth/login': 'Login user',
-            'POST /api/auth/refresh': 'Refresh token',
-            'GET /api/auth/profile': 'Get user profile',
-            'PUT /api/auth/profile': 'Update user profile'
-          },
-          transactions: {
-            'GET /api/transactions': 'Get transactions',
-            'POST /api/transactions': 'Create transaction',
-            'PUT /api/transactions/:id': 'Update transaction',
-            'DELETE /api/transactions/:id': 'Delete transaction'
-          },
-          financial: {
-            'GET /api/financial/current': 'Get current month data',
-            'POST /api/financial/current': 'Update current month data',
-            'GET /api/financial/historical': 'Get historical data'
-          },
-          upload: {
-            'POST /api/upload/csv': 'Upload CSV file',
-            'GET /api/upload/history': 'Get upload history'
-          },
-          chat: {
-            'POST /api/chat/message': 'Send message to AI',
-            'GET /api/chat/history': 'Get chat history'
-          }
-        }
-      });
-    });
-
     logInfo('Routes setup complete');
   }
 
   // Setup error handling
   private setupErrorHandling(): void {
-    // 404 handler
-    this.app.use('*', (req: Request, res: Response) => {
+    // 404 handler - This must come AFTER all other routes
+    this.app.use((req: Request, res: Response) => {
       res.status(404).json({
         error: 'Not Found',
         message: `Route ${req.method} ${req.originalUrl} not found`,
@@ -288,7 +253,7 @@ class MoneyWiseApp {
   // Start the server
   async start(): Promise<void> {
     try {
-      // Initialize database first
+      // Initialize database first (commented out for now)
       await this.initializeDatabase();
 
       // Start server

@@ -288,3 +288,6 @@ npm install compression
 npm install --save-dev @types/compression
 npm i --save-dev @types/compression
 
+"C:\Program Files\PostgreSQL\15\bin\psql.exe" -h localhost -p 54321 -U postgres
+
+

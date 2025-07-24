@@ -1,5 +1,6 @@
-// server/src/database/connection.ts
+// server/src/database/connection.ts - SYNCED WITH database.ts
 import { Pool } from 'pg';
+import { databaseConfig } from '../config/database';
 import { logInfo, logError } from '../utils/logger';
 
 class DatabaseConnection {
@@ -7,23 +8,11 @@ class DatabaseConnection {
   private static instance: DatabaseConnection;
 
   private constructor() {
-    this.pool = new Pool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '5432'),
-      database: process.env.DB_NAME || 'moneywise',
-      user: process.env.DB_USER || 'postgres',
-      password: process.env.DB_PASSWORD || 'password',
-      max: 20, // Maximum number of clients in the pool
-      idleTimeoutMillis: 30000, // Close idle clients after 30 seconds
-      connectionTimeoutMillis: 2000, // Return an error after 2 seconds if connection could not be established
-    });
-
-    // Handle pool errors
-    this.pool.on('error', (err) => {
-      logError('Unexpected error on idle client', err);
-    });
+    // Let database.ts handle all the configuration and pool creation
+    this.pool = databaseConfig.createPool();
   }
 
+  // Singleton pattern
   public static getInstance(): DatabaseConnection {
     if (!DatabaseConnection.instance) {
       DatabaseConnection.instance = new DatabaseConnection();
@@ -31,31 +20,57 @@ class DatabaseConnection {
     return DatabaseConnection.instance;
   }
 
+  // Get pool instance
   public getPool(): Pool {
     return this.pool;
   }
 
+  // Test database connection - delegates to databaseConfig for consistency
   public async testConnection(): Promise<boolean> {
+    return await databaseConfig.testConnection(this.pool);
+  }
+
+  // Get database information - delegates to databaseConfig
+  public async getDatabaseInfo() {
+    return await databaseConfig.getDatabaseInfo(this.pool);
+  }
+
+  // Get pool statistics - delegates to databaseConfig
+  public getPoolStats() {
+    return databaseConfig.getPoolStats();
+  }
+
+  // Health check - delegates to databaseConfig
+  public async healthCheck() {
+    return await databaseConfig.healthCheck();
+  }
+
+  // Close all connections - delegates to databaseConfig
+  public async closeConnection(): Promise<void> {
     try {
-      const client = await this.pool.connect();
-      const result = await client.query('SELECT NOW()');
-      client.release();
-      logInfo('Database connection successful', { timestamp: result.rows[0].now });
-      return true;
+      await databaseConfig.closePool();
+      logInfo('Database connection closed via connection.ts');
     } catch (error) {
-      logError('Database connection failed', error);
-      return false;
+      logError('Error closing database connection via connection.ts', error);
+      throw error;
     }
   }
 
-  public async closeConnection(): Promise<void> {
-    try {
-      await this.pool.end();
-      logInfo('Database connection pool closed');
-    } catch (error) {
-      logError('Error closing database connection pool', error);
-    }
+  // Execute query with retry logic - delegates to databaseConfig
+  public async executeWithRetry<T extends any[] = any[]>(
+    query: string, 
+    params?: any[], 
+    maxRetries?: number, 
+    retryDelay?: number
+  ): Promise<T> {
+    return await databaseConfig.executeWithRetry<T>(query, params, maxRetries, retryDelay);
+  }
+
+  // Additional helper method to get the current configuration
+  public getConfig() {
+    return databaseConfig.getConfig();
   }
 }
 
+// Export singleton instance
 export const db = DatabaseConnection.getInstance();

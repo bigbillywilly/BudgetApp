@@ -18,12 +18,12 @@ export const errorHandler = (
     status: 'error',
     statusCode,
     message,
-    ...(isDevelopment && { stack: err.stack }),
+    ...(isDevelopment() && { stack: err.stack }), // FIXED: Added parentheses
   };
 
   // Log error
   console.error(`Error ${statusCode}: ${message}`);
-  if (isDevelopment) {
+  if (isDevelopment()) { // FIXED: Added parentheses
     console.error(err.stack);
   }
 
