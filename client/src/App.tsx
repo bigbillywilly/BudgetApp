@@ -1,10 +1,16 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { History, Calendar, BarChart3 } from 'lucide-react';
-import Navigation from './components/common/Navigation';
+
+// Import our components and context
+import { AuthProvider, useAuth } from './context/AuthContext';
+import Header from './components/common/Header';
+import Loading from './components/common/Loading';
+import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AIAdvisor from './pages/AIAdvisor';
 
-function App() {
+// Protected App Content - Main application when user is authenticated
+const AppContent: React.FC = () => {
   const [currentPage, setCurrentPage] = useState<'dashboard' | 'previous' | 'advisor'>('dashboard');
 
   return (
@@ -15,15 +21,18 @@ function App() {
         <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-gradient-to-br from-gray-400/10 to-gray-500/10 rounded-full blur-3xl animate-pulse delay-1000"></div>
       </div>
 
-      {/* Navigation */}
-      <Navigation currentPage={currentPage} setCurrentPage={setCurrentPage} />
+      {/* Header with Navigation and User Info */}
+      <Header currentPage={currentPage} setCurrentPage={setCurrentPage} />
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Dashboard Page */}
         {currentPage === 'dashboard' && <Dashboard />}
         
+        {/* AI Advisor Page */}
         {currentPage === 'advisor' && <AIAdvisor />}
         
+        {/* Previous Months Page (Coming Soon) */}
         {currentPage === 'previous' && (
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-8">
@@ -57,6 +66,45 @@ function App() {
       </div>
     </div>
   );
-}
+};
+
+// App Router - Handles authentication flow
+const AppRouter: React.FC = () => {
+  const { isAuthenticated, isLoading, user } = useAuth();
+
+  console.log('🔐 Auth Status:', { isAuthenticated, isLoading, user: user?.email });
+
+  // Show loading screen while checking authentication
+  if (isLoading) {
+    return <Loading />;
+  }
+
+  // Show login page if not authenticated
+  if (!isAuthenticated) {
+    return <Login />;
+  }
+
+  // Show main app if authenticated
+  return <AppContent />;
+};
+
+// Main App Component
+const App: React.FC = () => {
+  console.log('🚀 MoneyWise App starting...');
+  
+  // For Vite, use import.meta.env instead of process.env
+  // Only log in development mode
+  if (import.meta.env.DEV) {
+    console.log('🌐 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5000');
+  }
+
+  return (
+    <div className="App">
+      <AuthProvider>
+        <AppRouter />
+      </AuthProvider>
+    </div>
+  );
+};
 
 export default App;
