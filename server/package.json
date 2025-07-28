@@ -11,27 +11,22 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
-    
     "migration:run": "ts-node src/database/migrationRunner.ts up",
     "migration:status": "ts-node src/database/migrationRunner.ts status",
     "migration:create": "ts-node src/database/migrationRunner.ts create",
     "migration:validate": "ts-node src/database/migrationRunner.ts validate",
     "migration:rollback": "ts-node src/database/migrationRunner.ts rollback",
-    
     "db:seed": "psql -h $DB_HOST -U $DB_USER -d $DB_NAME -f src/database/seeds/001_sample_data.sql",
     "db:reset": "npm run db:drop && npm run db:create && npm run migration:run && npm run db:seed",
     "db:create": "createdb $DB_NAME",
     "db:drop": "dropdb $DB_NAME --if-exists",
-    
     "lint": "eslint src/**/*.ts",
     "lint:fix": "eslint src/**/*.ts --fix",
     "format": "prettier --write src/**/*.ts",
     "type-check": "tsc --noEmit",
     "clean": "rimraf dist",
-    
     "docker:build": "docker build -t moneywise-api .",
     "docker:run": "docker run -p 5000:5000 --env-file .env moneywise-api",
-    
     "setup": "npm install && npm run migration:run && echo 'Setup complete! Run npm run dev to start the server'"
   },
   "keywords": [],
@@ -47,7 +42,7 @@
     "cors": "^2.8.5",
     "csv-parser": "^3.2.0",
     "dotenv": "^17.2.0",
-    "express": "^5.1.0",
+    "express": "^4.21.2",
     "helmet": "^8.1.0",
     "joi": "^17.13.3",
     "jsonwebtoken": "^9.0.2",
@@ -66,6 +61,7 @@
     "@types/compression": "^1.8.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
+    "@types/express-serve-static-core": "^5.0.7",
     "@types/helmet": "^0.0.48",
     "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",

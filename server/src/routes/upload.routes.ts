@@ -1,4 +1,4 @@
-// server/src/routes/upload.routes.ts
+// server/src/routes/upload.routes.ts - UPDATED WITH ANALYSIS ENDPOINT
 import { Router } from 'express';
 import { uploadController, upload } from '../controllers/uploadController';
 import { authenticateToken } from '../middleware/auth';
@@ -18,10 +18,13 @@ router.post('/csv', upload.single('csvFile'), uploadController.uploadCSV.bind(up
 // Upload history
 router.get('/history', uploadController.getUploadHistory.bind(uploadController));
 
-// Get transactions from specific upload - FIXED ROUTE PATTERN
-router.get('/:uploadId/transactions', uploadController.getUploadTransactions.bind(uploadController));
+// Get transactions from specific upload
+router.get('/:id/transactions', uploadController.getUploadTransactions.bind(uploadController));
 
-// Delete upload and its transactions - FIXED ROUTE PATTERN  
-router.delete('/:uploadId', uploadController.deleteUpload.bind(uploadController));
+// Get detailed analysis for specific upload - NEW ENDPOINT
+router.get('/:id/analysis', uploadController.getUploadAnalysis.bind(uploadController));
+
+// Delete upload and its transactions
+router.delete('/:id', uploadController.deleteUpload.bind(uploadController));
 
 export { router as uploadRoutes };

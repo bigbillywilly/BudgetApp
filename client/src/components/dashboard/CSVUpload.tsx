@@ -1,11 +1,12 @@
+// client/src/components/dashboard/CSVUpload.tsx
 import { useState } from 'react';
 import { Upload, CheckCircle, Sparkles, AlertCircle, FileText } from 'lucide-react';
-import { apiService } from '../../services/api';
+import { apiService, type UploadResponse } from '../../services/api';
 
 const CSVUpload = () => {
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [uploadResult, setUploadResult] = useState<any>(null);
+  const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [error, setError] = useState<string>('');
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -38,9 +39,19 @@ const CSVUpload = () => {
       
       const response = await apiService.uploadCSV(file);
       
-      if (response.success) {
+      if (response.success && response.data) {
         console.log('✅ Upload successful:', response.data);
         setUploadResult(response.data);
+        
+        // Trigger transaction refresh across the app
+        localStorage.setItem('transactions_updated', Date.now().toString());
+        window.dispatchEvent(new CustomEvent('refresh_transactions'));
+        
+        // Also trigger a storage event for other tabs/components
+        window.dispatchEvent(new StorageEvent('storage', {
+          key: 'transactions_updated',
+          newValue: Date.now().toString()
+        }));
       } else {
         console.error('❌ Upload failed:', response.error);
         setError(response.error || 'Upload failed');
@@ -58,6 +69,12 @@ const CSVUpload = () => {
     setUploadResult(null);
     setError('');
     setIsProcessing(false);
+  };
+
+  const handleViewTransactions = () => {
+    // Trigger a refresh of the parent component or navigate to transactions
+    // You can emit an event or call a callback prop here
+    window.location.reload();
   };
 
   return (
@@ -84,10 +101,13 @@ const CSVUpload = () => {
               onChange={handleFileUpload}
               className="hidden"
               id="csv-upload"
+              disabled={isProcessing}
             />
             <label
               htmlFor="csv-upload"
-              className="inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-full text-white bg-gradient-to-r from-blue-500 to-purple-600 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+              className={`inline-flex items-center px-6 py-3 border border-transparent text-sm font-semibold rounded-full text-white bg-gradient-to-r from-blue-500 to-purple-600 cursor-pointer shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 ${
+                isProcessing ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
             >
               <Sparkles className="w-4 h-4 mr-2" />
               Choose File
@@ -150,11 +170,15 @@ const CSVUpload = () => {
                   <CheckCircle className="w-4 h-4 mr-2" />
                   Upload successful!
                 </p>
-                {uploadResult.processedTransactions && (
-                  <p className="text-sm text-green-600">
-                    Processed {uploadResult.processedTransactions} transactions
-                  </p>
-                )}
+                <div className="text-sm text-green-600 space-y-1">
+                  <p>Upload ID: {uploadResult.uploadId}</p>
+                  <p>File: {uploadResult.filename}</p>
+                  <p>Size: {(uploadResult.size / 1024).toFixed(1)} KB</p>
+                  <p>Date: {new Date(uploadResult.uploadDate).toLocaleString()}</p>
+                  {uploadResult.processedTransactions && (
+                    <p>Processed {uploadResult.processedTransactions} transactions</p>
+                  )}
+                </div>
               </div>
             )}
 
@@ -162,13 +186,14 @@ const CSVUpload = () => {
             <div className="flex space-x-3 justify-center">
               <button
                 onClick={handleReset}
-                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors"
+                disabled={isProcessing}
+                className="px-4 py-2 bg-gray-100 text-gray-700 rounded-xl font-medium hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Upload Another
               </button>
               {uploadResult && (
                 <button
-                  onClick={() => window.location.reload()}
+                  onClick={handleViewTransactions}
                   className="px-4 py-2 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all duration-300"
                 >
                   View Transactions
@@ -187,10 +212,11 @@ const CSVUpload = () => {
           <li>• Ensure columns include: Date, Description, Amount</li>
           <li>• File size limit: 5MB</li>
           <li>• Transactions will be automatically categorized</li>
+          <li>• Supported formats: Transaction Date, Posted Date, Description, Category, Debit, Credit</li>
         </ul>
       </div>
     </div>
   );
 };
 
-export default CSVUpload;
+export default CSVUpload; 

@@ -287,6 +287,8 @@ npm install --save-dev @types/uuid
 npm install compression
 npm install --save-dev @types/compression
 npm i --save-dev @types/compression
+npm uninstall @types/express @types/express-serve-static-core
+npm install --save-dev @types/express@latest @types/express-serve-static-core@latest
 
 "C:\Program Files\PostgreSQL\15\bin\psql.exe" -h localhost -p 54321 -U postgres
 

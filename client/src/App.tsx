@@ -2,16 +2,18 @@ import React, { useState } from 'react';
 import { History, Calendar, BarChart3 } from 'lucide-react';
 
 // Import our components and context
-import { AuthProvider, useAuth } from './context/AuthContext';
+import AuthProvider, { useAuth } from './context/AuthContext'; // Fixed import
 import Header from './components/common/Header';
 import Loading from './components/common/Loading';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AIAdvisor from './pages/AIAdvisor';
+import Transactions from './pages/transactions';
 
 // Protected App Content - Main application when user is authenticated
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'previous' | 'advisor'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'previous' | 'advisor' | 'transactions'>('dashboard');
+  const { user } = useAuth();
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -28,6 +30,9 @@ const AppContent: React.FC = () => {
       <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Dashboard Page */}
         {currentPage === 'dashboard' && <Dashboard />}
+        
+        {/* Transactions Page */}
+        {currentPage === 'transactions' && <Transactions />}
         
         {/* AI Advisor Page */}
         {currentPage === 'advisor' && <AIAdvisor />}
@@ -64,6 +69,16 @@ const AppContent: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Debug Panel (Development Only) */}
+      {import.meta.env.DEV && (
+        <div className="fixed bottom-4 right-4 bg-gray-800 text-green-400 p-4 rounded-lg text-xs font-mono max-w-sm">
+          <div className="text-white font-bold mb-2">Debug Info</div>
+          <div>User: {user?.email || 'Not logged in'}</div>
+          <div>Page: {currentPage}</div>
+          <div>API: {import.meta.env.VITE_API_URL || 'http://localhost:5000'}</div>
+        </div>
+      )}
     </div>
   );
 };
@@ -72,11 +87,20 @@ const AppContent: React.FC = () => {
 const AppRouter: React.FC = () => {
   const { isAuthenticated, isLoading, user } = useAuth();
 
-  console.log('🔐 Auth Status:', { isAuthenticated, isLoading, user: user?.email });
+  console.log('🔐 Auth Status:', { 
+    isAuthenticated, 
+    isLoading, 
+    userEmail: user?.email || 'none',
+    userId: user?.id || 'none'
+  });
 
   // Show loading screen while checking authentication
   if (isLoading) {
-    return <Loading />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <Loading />
+      </div>
+    );
   }
 
   // Show login page if not authenticated
@@ -96,6 +120,7 @@ const App: React.FC = () => {
   // Only log in development mode
   if (import.meta.env.DEV) {
     console.log('🌐 API URL:', import.meta.env.VITE_API_URL || 'http://localhost:5000');
+    console.log('🔧 Environment:', import.meta.env.MODE);
   }
 
   return (

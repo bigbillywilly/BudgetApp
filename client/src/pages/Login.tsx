@@ -10,6 +10,7 @@ const Login = () => {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
+  const [successMessage, setSuccessMessage] = useState('');
 
   const { login, register } = useAuth();
 
@@ -17,31 +18,53 @@ const Login = () => {
     e.preventDefault();
     setIsLoading(true);
     setError('');
+    setSuccessMessage('');
 
     try {
       if (isLogin) {
+        console.log('🔐 Attempting login...');
         const result = await login(email, password);
+        
         if (!result.success) {
           setError(result.error || 'Login failed');
+          console.error('❌ Login failed:', result.error);
+        } else {
+          console.log('✅ Login successful!');
+          // AuthContext will handle the redirect via isAuthenticated state change
         }
       } else {
+        console.log('📝 Attempting registration...');
         const result = await register(email, name, password);
+        
         if (result.success) {
+          setSuccessMessage('Registration successful! Please login with your credentials.');
           setIsLogin(true);
           setError('');
+          // Clear form
           setEmail('');
           setPassword('');
           setName('');
-          alert('Registration successful! Please login.');
+          console.log('✅ Registration successful!');
         } else {
           setError(result.error || 'Registration failed');
+          console.error('❌ Registration failed:', result.error);
         }
       }
     } catch (err) {
-      setError('An unexpected error occurred');
+      console.error('❌ Unexpected error:', err);
+      setError('An unexpected error occurred. Please try again.');
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const switchMode = () => {
+    setIsLogin(!isLogin);
+    setError('');
+    setSuccessMessage('');
+    setEmail('');
+    setPassword('');
+    setName('');
   };
 
   return (
@@ -63,7 +86,8 @@ const Login = () => {
           <div className="mb-6">
             <div className="flex bg-gray-100 rounded-2xl p-1">
               <button
-                onClick={() => setIsLogin(true)}
+                type="button"
+                onClick={() => switchMode()}
                 className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all ${
                   isLogin
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -73,7 +97,8 @@ const Login = () => {
                 Login
               </button>
               <button
-                onClick={() => setIsLogin(false)}
+                type="button"
+                onClick={() => switchMode()}
                 className={`flex-1 py-2 px-4 rounded-xl text-sm font-medium transition-all ${
                   !isLogin
                     ? 'bg-white text-gray-900 shadow-sm'
@@ -100,6 +125,7 @@ const Login = () => {
                   className="w-full pl-10 pr-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your email"
                   required
+                  disabled={isLoading}
                 />
               </div>
             </div>
@@ -117,6 +143,9 @@ const Login = () => {
                   className="w-full px-4 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your full name"
                   required
+                  disabled={isLoading}
+                  minLength={2}
+                  maxLength={50}
                 />
               </div>
             )}
@@ -135,16 +164,31 @@ const Login = () => {
                   className="w-full pl-10 pr-12 py-3 bg-white/50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter your password"
                   required
+                  disabled={isLoading}
+                  minLength={8}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 disabled:opacity-50"
+                  disabled={isLoading}
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
+              {!isLogin && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Password must be at least 8 characters with uppercase, lowercase, number, and special character
+                </p>
+              )}
             </div>
+
+            {/* Success Message */}
+            {successMessage && (
+              <div className="bg-green-50 border border-green-200 rounded-xl p-3">
+                <p className="text-green-600 text-sm">{successMessage}</p>
+              </div>
+            )}
 
             {/* Error Message */}
             {error && (
@@ -157,7 +201,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none flex items-center justify-center"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none disabled:hover:scale-100 flex items-center justify-center"
             >
               {isLoading ? (
                 <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
@@ -169,7 +213,33 @@ const Login = () => {
               )}
             </button>
           </form>
+
+          {/* Additional Help */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-gray-500">
+              {isLogin ? "Don't have an account? " : "Already have an account? "}
+              <button
+                type="button"
+                onClick={() => switchMode()}
+                className="text-blue-600 hover:text-blue-700 font-medium"
+                disabled={isLoading}
+              >
+                {isLogin ? 'Register here' : 'Login here'}
+              </button>
+            </p>
+          </div>
         </div>
+
+        {/* Debug Info (only in development) */}
+        {import.meta.env.DEV && (
+          <div className="mt-4 p-4 bg-gray-800 text-green-400 text-xs rounded-lg font-mono">
+            <div>API URL: {import.meta.env.VITE_API_URL || 'http://localhost:5000'}</div>
+            <div>Mode: {isLogin ? 'Login' : 'Register'}</div>
+            <div>Loading: {isLoading ? 'Yes' : 'No'}</div>
+            {error && <div className="text-red-400">Error: {error}</div>}
+            {successMessage && <div className="text-green-400">Success: {successMessage}</div>}
+          </div>
+        )}
       </div>
     </div>
   );

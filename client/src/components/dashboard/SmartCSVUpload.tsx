@@ -1,19 +1,19 @@
 // client/src/context/AuthContext.tsx
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { apiService } from '../services/api';
+import { apiService } from '../../services/api';
 
-// Types
+// Types - FIXED to match API response
 interface User {
   id: string;
   email: string;
   name: string;
-  emailVerified?: boolean; // Made optional to match API response
+  emailVerified: boolean; // Changed from optional to required boolean
 }
 
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: User | null; // Changed from string to User object
+  user: User | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (email: string, name: string, password: string) => Promise<{ success: boolean; error?: string }>;
@@ -26,6 +26,16 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 interface AuthProviderProps {
   children: ReactNode;
 }
+
+// Helper function to normalize user data
+const normalizeUserData = (userData: any): User => {
+  return {
+    id: userData.id,
+    email: userData.email,
+    name: userData.name,
+    emailVerified: Boolean(userData.emailVerified), // Convert to boolean, defaults to false
+  };
+};
 
 // AuthProvider component - MUST be default export for HMR
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
@@ -57,16 +67,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (response.success && response.data?.user) {
         const userData = response.data.user;
-        // Ensure emailVerified has a default value
-        const userWithDefaults: User = {
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          emailVerified: userData.emailVerified ?? false, // Default to false if undefined
-        };
-        setUser(userWithDefaults);
+        
+        // FIXED: Use normalizeUserData to ensure proper typing
+        const normalizedUser = normalizeUserData(userData);
+        setUser(normalizedUser);
         setIsAuthenticated(true);
-        console.log('✅ Token validated, user authenticated:', userWithDefaults.email);
+        console.log('✅ Token validated, user authenticated:', normalizedUser.email);
       } else {
         console.log('❌ Token validation failed:', response.error);
         clearAuthData();
@@ -88,7 +94,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
   };
 
-  // Login function - FIXED return type
+  // Login function - FIXED with proper data normalization
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
       console.log('🔐 Attempting login for:', email);
@@ -103,19 +109,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         localStorage.setItem('refreshToken', tokens.refreshToken);
         localStorage.setItem('token', tokens.accessToken); // Backward compatibility
 
-        // Ensure user data has proper defaults
-        const userWithDefaults: User = {
-          id: userData.id,
-          email: userData.email,
-          name: userData.name,
-          emailVerified: userData.emailVerified ?? false, // Default to false if undefined
-        };
-
-        // Update state
-        setUser(userWithDefaults);
+        // FIXED: Use normalizeUserData to ensure proper typing
+        const normalizedUser = normalizeUserData(userData);
+        setUser(normalizedUser);
         setIsAuthenticated(true);
 
-        console.log('✅ Login successful:', userWithDefaults.email);
+        console.log('✅ Login successful:', normalizedUser.email);
         return { success: true };
       } else {
         console.error('❌ Login failed:', response.error);
@@ -152,7 +151,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('🚪 Logging out user:', user?.email);
     
     // Call API logout (optional, but good practice)
-    apiService.logout().catch(error => {
+    apiService.logout().catch((error: unknown) => {
       console.warn('⚠️ API logout failed:', error);
     });
     
