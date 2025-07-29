@@ -308,7 +308,7 @@ class MoneyWiseApp {
       await this.initializeDatabase();
 
       // Start server
-      this.server = this.app.listen(this.port, () => {
+      this.server = this.app.listen(this.port, '0.0.0.0', () => {
         console.log('\n✅ SERVER STARTED SUCCESSFULLY!');
         console.log(`🌐 Server running on: http://localhost:${this.port}`);
         console.log(`📋 API Documentation: http://localhost:${this.port}/api/docs`);
