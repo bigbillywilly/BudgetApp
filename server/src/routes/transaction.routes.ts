@@ -1,4 +1,4 @@
-// server/src/routes/transaction.routes.ts - REAL DATA VERSION
+// server/src/routes/transaction.routes.ts - FIXED ROUTE ORDER
 import { Router } from 'express';
 import { transactionController } from '../controllers/transactionController';
 import { validate, transactionSchemas } from '../middleware/validation';
@@ -12,40 +12,23 @@ console.log('💳 Loading REAL transaction routes with database integration...')
 router.use(authenticateToken);
 
 // =============================================================================
-// TRANSACTION CRUD OPERATIONS
+// IMPORTANT: SPECIFIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
+// Put all static routes BEFORE /:id to avoid route conflicts
 // =============================================================================
 
-// Get all transactions for authenticated user (with filtering and pagination)
+// STATIC ROUTES FIRST (these must come before /:id)
+router.get('/categories', transactionController.getCategories);
+router.get('/analytics/spending-by-category', transactionController.getSpendingByCategory);
+router.get('/analytics/trends', transactionController.getMonthlyTrends);
+
+// GENERAL TRANSACTION ROUTES
 router.get('/', transactionController.getTransactions);
-
-// Get single transaction by ID for authenticated user
-router.get('/:id', transactionController.getTransaction);
-
-// Create new transaction for authenticated user
 router.post('/', validate(transactionSchemas.createTransaction), transactionController.createTransaction);
 
-// Update existing transaction for authenticated user
+// PARAMETERIZED ROUTES LAST (so they don't catch static routes)
+router.get('/:id', transactionController.getTransaction);
 router.put('/:id', transactionController.updateTransaction);
-
-// Delete transaction for authenticated user
 router.delete('/:id', transactionController.deleteTransaction);
-
-// =============================================================================
-// TRANSACTION CATEGORIES
-// =============================================================================
-
-// Get all available transaction categories
-router.get('/categories', transactionController.getCategories);
-
-// =============================================================================
-// ANALYTICS ENDPOINTS
-// =============================================================================
-
-// Get spending breakdown by category for date range
-router.get('/analytics/spending-by-category', transactionController.getSpendingByCategory);
-
-// Get monthly spending trends for authenticated user
-router.get('/analytics/trends', transactionController.getMonthlyTrends);
 
 // =============================================================================
 // TEST/DEBUG ROUTES (Development only)

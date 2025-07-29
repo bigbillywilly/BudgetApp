@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { Sparkles, Brain, History } from 'lucide-react';
+import { Sparkles, Brain } from 'lucide-react';
 
 interface NavigationProps {
-    currentPage: 'dashboard' | 'previous' | 'advisor';
-    setCurrentPage: (page: 'dashboard' | 'previous' | 'advisor') => void;
+    currentPage: 'dashboard' | 'advisor';
+    setCurrentPage: (page: 'dashboard' | 'advisor') => void;
 }
 
 const Navigation = ({ currentPage, setCurrentPage }: NavigationProps) => {
@@ -20,7 +20,7 @@ const Navigation = ({ currentPage, setCurrentPage }: NavigationProps) => {
                         </div>
                         <div>
                             <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
-                                MoneyWise
+                                EMoneyWise
                             </h1>
                             <p className="text-sm text-gray-600 font-medium">Smart financial tracking</p>
                         </div>
@@ -35,16 +35,6 @@ const Navigation = ({ currentPage, setCurrentPage }: NavigationProps) => {
                                 }`}
                         >
                             Dashboard
-                        </button>
-                        <button
-                            onClick={() => setCurrentPage('previous')}
-                            className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center space-x-2 ${currentPage === 'previous'
-                                    ? 'bg-blue-500 text-white shadow-lg'
-                                    : 'text-gray-600 hover:text-gray-900 hover:bg-white/50'
-                                }`}
-                        >
-                            <History className="w-4 h-4" />
-                            <span>Previous Months</span>
                         </button>
                         <button
                             onClick={() => setCurrentPage('advisor')}

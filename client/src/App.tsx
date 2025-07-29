@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { History, Calendar, BarChart3 } from 'lucide-react';
+import { BarChart3 } from 'lucide-react';
 
 // Import our components and context
-import AuthProvider, { useAuth } from './context/AuthContext'; // Fixed import
+import AuthProvider, { useAuth } from './context/AuthContext';
+import BudgetProvider from './context/budgetContext'; // NEW: Budget context
 import Header from './components/common/Header';
 import Loading from './components/common/Loading';
 import Login from './pages/Login';
@@ -12,7 +13,7 @@ import Transactions from './pages/transactions';
 
 // Protected App Content - Main application when user is authenticated
 const AppContent: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<'dashboard' | 'previous' | 'advisor' | 'transactions'>('dashboard');
+  const [currentPage, setCurrentPage] = useState<'dashboard' | 'advisor' | 'transactions'>('dashboard');
   const { user } = useAuth();
 
   return (
@@ -36,38 +37,6 @@ const AppContent: React.FC = () => {
         
         {/* AI Advisor Page */}
         {currentPage === 'advisor' && <AIAdvisor />}
-        
-        {/* Previous Months Page (Coming Soon) */}
-        {currentPage === 'previous' && (
-          <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-8">
-              <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
-                <History className="w-10 h-10 text-white" />
-              </div>
-              <h2 className="text-3xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent mb-2">
-                Previous Months
-              </h2>
-              <p className="text-gray-600 text-lg">Track your financial history and progress over time</p>
-            </div>
-
-            <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-12 border border-white/20 text-center">
-              <div className="w-24 h-24 bg-gradient-to-br from-gray-200 to-gray-300 rounded-3xl flex items-center justify-center mx-auto mb-6">
-                <Calendar className="w-12 h-12 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Coming Soon</h3>
-              <p className="text-gray-600 mb-6">
-                Previous months functionality will be implemented next. This will show your historical financial data and spending trends.
-              </p>
-              <button
-                onClick={() => setCurrentPage('dashboard')}
-                className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-2xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105"
-              >
-                <BarChart3 className="w-5 h-5 mr-2" />
-                Go to Dashboard
-              </button>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Debug Panel (Development Only) */}
@@ -108,8 +77,12 @@ const AppRouter: React.FC = () => {
     return <Login />;
   }
 
-  // Show main app if authenticated
-  return <AppContent />;
+  // Show main app if authenticated - WRAPPED IN BUDGET PROVIDER
+  return (
+    <BudgetProvider>
+      <AppContent />
+    </BudgetProvider>
+  );
 };
 
 // Main App Component

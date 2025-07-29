@@ -45,13 +45,54 @@ interface RegisterData {
   message?: string;
 }
 
-// Data types
 interface UploadResponse {
   uploadId: string;
   filename: string;
   size: number;
   uploadDate: string;
-  processedTransactions?: number;
+  processedTransactions: number;
+  summary: {
+    totalTransactions: number;
+    totalDebits: number;
+    totalCredits: number;
+    netAmount: number;
+    dateRange: {
+      start: string;
+      end: string;
+    };
+  };
+  categoryBreakdown: { [category: string]: { total: number; count: number } };
+  budgetAnalysis?: {
+    availableToSpend: number;
+    totalSpent: number;
+    remaining: number;
+    percentageUsed: number;
+    isOverBudget: boolean;
+    monthlyBudget: {
+      income: number;
+      fixedExpenses: number;
+      savingsGoal: number;
+    };
+  };
+  insights: string[];
+  categories: string[];
+  
+  // NEW: Duplicate prevention information
+  duplicateInfo?: {
+    duplicatesFound: number;
+    duplicatesSkipped: number;
+    newTransactionsAdded: number;
+    totalTransactionsInFile: number;
+    duplicateDetails: Array<{
+      date: string;
+      description: string;
+      amount: number;
+      existingId: string;
+      existingUploadId?: string;
+      existingCreatedAt?: string;
+      reason: string; // Add this missing property
+    }>;
+  };
 }
 
 interface ChatResponse {
