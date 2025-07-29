@@ -205,7 +205,7 @@ class UploadController {
       let maxOverlapCount = 0;
 
       // Find the upload with the most overlapping transactions
-      for (const [uploadId, overlapCount] of duplicatesByUpload.entries()) {
+      for (const [uploadId, overlapCount] of Array.from(duplicatesByUpload.entries())) {
         if (overlapCount > maxOverlapCount) {
           maxOverlapCount = overlapCount;
           

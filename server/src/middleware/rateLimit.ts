@@ -260,11 +260,11 @@ export const progressiveLimiter = (baseMax: number, windowMs: number) => {
     const window = windowMs;
     
     // Clean old entries
-    for (const [k, v] of store.entries()) {
+    Array.from(store.entries()).forEach(([k, v]) => {
       if (now - v.timestamp > window) {
         store.delete(k);
       }
-    }
+    });
     
     const current = store.get(key) || { count: 0, timestamp: now };
     
