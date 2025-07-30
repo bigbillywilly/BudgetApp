@@ -1,4 +1,4 @@
-// server/src/middleware/rateLimit.ts - ENHANCED VERSION
+// server/src/middleware/rateLimit.ts - ENHANCED VERSION with latest express-rate-limit
 import rateLimit from 'express-rate-limit';
 import { Request, Response } from 'express';
 import { logWarn, logError } from '../utils/logger';
@@ -22,22 +22,24 @@ const createLimiter = (options: {
 }) => {
   return rateLimit({
     windowMs: options.windowMs,
-    max: options.max,
+    limit: options.max, // Updated from 'max' to 'limit'
     message: {
       success: false,
       error: options.message,
       retryAfter: Math.ceil(options.windowMs / 1000),
       timestamp: new Date().toISOString()
     },
-    standardHeaders: true, // Return rate limit info in `RateLimit-*` headers
-    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+    standardHeaders: 'draft-7', // Updated to use latest standard
+    legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests || false,
     skipFailedRequests: options.skipFailedRequests || false,
     keyGenerator: options.keyGenerator || ((req: Request) => {
-      // Use user ID if authenticated, otherwise fall back to IP
+      // Use user ID if authenticated, otherwise fall back to IP using built-in helper
       const userId = req.user?.userId;
-      const ip = req.ip || req.connection.remoteAddress;
-      return userId || ip || 'unknown';
+      if (userId) return userId;
+      
+      // Use the built-in IP helper for safe IPv4/IPv6 handling
+      return req.ip || 'unknown';
     }),
     handler: (req: Request, res: Response) => {
       const identifier = req.user?.userId || req.ip;
@@ -91,8 +93,8 @@ export const authLimiter = createLimiter({
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful logins
   keyGenerator: (req: Request) => {
-    // For auth, always use IP to prevent account enumeration
-    return req.ip || req.connection.remoteAddress || 'unknown';
+    // For auth, always use IP with built-in helper for safe handling
+    return req.ip || 'unknown';
   },
   onLimitReached: (req, res) => {
     logWarn('Auth rate limit exceeded - potential brute force attack', {
