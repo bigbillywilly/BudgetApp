@@ -175,9 +175,7 @@ class DatabaseConfiguration {
         max: this.config.max,
         min: this.config.min,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
-        connectionTimeoutMillis: this.config.connectionTimeoutMillis,
-        // Explicitly force IPv4
-        family: 4
+        connectionTimeoutMillis: this.config.connectionTimeoutMillis
       });
       
       logInfo('Database pool created with aggressive IPv4 forcing', {
