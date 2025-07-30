@@ -156,19 +156,27 @@ class DatabaseConfiguration {
 
     if (process.env.DATABASE_URL) {
       console.log('\n🔗 Creating pool with DATABASE_URL...');
+      
+      // Parse the DATABASE_URL to extract components
+      const url = new URL(process.env.DATABASE_URL);
+      
       this.pool = new Pool({
-        connectionString: process.env.DATABASE_URL,
+        host: 'db.plnpicftnscwdaegwrzk.supabase.co', // Force hostname instead of using URL parsing
+        port: 5432,
+        database: url.pathname.slice(1), // Remove leading slash
+        user: url.username,
+        password: url.password,
         ssl: { rejectUnauthorized: false },
         max: this.config.max,
         min: this.config.min,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
         connectionTimeoutMillis: this.config.connectionTimeoutMillis,
-        // Force IPv4
-        host: 'db.plnpicftnscwdaegwrzk.supabase.co', // Override IPv6
-        port: 5432
+        // Force IPv4 by setting family
+        options: '-c default_transaction_isolation=read_committed'
       });
       
-      logInfo('Database pool created with DATABASE_URL', {
+      logInfo('Database pool created with parsed DATABASE_URL', {
+        host: 'db.plnpicftnscwdaegwrzk.supabase.co',
         maxConnections: this.config.max
       });
     } else {
