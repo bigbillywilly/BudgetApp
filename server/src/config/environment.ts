@@ -166,79 +166,60 @@ class EnvironmentConfiguration {
 
   private validateConfiguration(): void {
     const errors: string[] = [];
-    const warnings: string[] = [];
 
-    // Required environment variables
-    const required = [
-      'DB_HOST',
-      'DB_NAME',
-      'DB_USER',
-      'DB_PASSWORD',
-      'JWT_ACCESS_SECRET',
-      'JWT_REFRESH_SECRET'
-    ];
-
-    required.forEach(key => {
-      if (!process.env[key]) {
-        errors.push(`Missing required environment variable: ${key}`);
-      }
-    });
-
-    // Security validations
-    if (this.config.auth.jwtAccessSecret === 'default-access-secret-change-me') {
-      warnings.push('Using default JWT access secret - change this in production!');
+    // Core application variables (always required)
+    if (!this.config.port || this.config.port <= 0) {
+      errors.push('Invalid or missing PORT');
     }
 
-    if (this.config.auth.jwtRefreshSecret === 'default-refresh-secret-change-me') {
-      warnings.push('Using default JWT refresh secret - change this in production!');
+    if (!this.config.auth.jwtAccessSecret) {
+      errors.push('Missing required environment variable: JWT_ACCESS_SECRET');
     }
 
-    if (this.config.security.encryptionKey === 'default-encryption-key-32-chars!') {
-      warnings.push('Using default encryption key - change this in production!');
+    if (!this.config.auth.jwtRefreshSecret) {
+      errors.push('Missing required environment variable: JWT_REFRESH_SECRET');
     }
 
-    // Production-specific validations
-    if (this.config.nodeEnv === 'production') {
-      if (!this.config.database.ssl && !process.env.DATABASE_URL) {
-        warnings.push('SSL is disabled for database in production');
+    if (!this.config.security.encryptionKey) {
+      errors.push('Missing required environment variable: ENCRYPTION_KEY');
+    }
+
+    // Database validation - ONLY check individual variables if DATABASE_URL is NOT present
+    if (!process.env.DATABASE_URL) {
+      // Only validate individual DB variables if DATABASE_URL doesn't exist
+      if (!this.config.database.host) {
+        errors.push('Missing required environment variable: DB_HOST');
       }
 
-      if (!this.config.services.sentryDsn) {
-        warnings.push('No Sentry DSN configured for production error tracking');
+      if (!this.config.database.name) {
+        errors.push('Missing required environment variable: DB_NAME');
       }
 
-      if (this.config.security.corsOrigins.includes('http://localhost:3000')) {
-        warnings.push('localhost origins detected in production CORS configuration');
+      if (!this.config.database.user) {
+        errors.push('Missing required environment variable: DB_USER');
       }
+
+      if (!this.config.database.password) {
+        errors.push('Missing required environment variable: DB_PASSWORD');
+      }
+    } else {
+      console.log('✅ Using DATABASE_URL - skipping individual DB variable validation');
     }
 
-    // Numeric validations
-    if (this.config.port < 1 || this.config.port > 65535) {
-      errors.push('Invalid port number');
+    // CORS validation
+    if (!this.config.security.corsOrigins || this.config.security.corsOrigins.length === 0) {
+      errors.push('Missing or invalid CORS origins configuration');
     }
 
-    if (this.config.database.port < 1 || this.config.database.port > 65535) {
-      errors.push('Invalid database port number');
-    }
-
-    if (this.config.auth.bcryptSaltRounds < 10 || this.config.auth.bcryptSaltRounds > 15) {
-      warnings.push('bcrypt salt rounds should be between 10-15 for optimal security/performance');
-    }
-
-    // Log results
     if (errors.length > 0) {
       logError('Environment configuration validation failed', { errors });
       throw new Error(`Environment validation failed: ${errors.join(', ')}`);
     }
 
-    if (warnings.length > 0) {
-      logWarn('Environment configuration warnings', { warnings });
-    }
-
     logInfo('Environment configuration validated successfully', {
       nodeEnv: this.config.nodeEnv,
       port: this.config.port,
-      database: `${this.config.database.host}:${this.config.database.port}/${this.config.database.name}`,
+      database: process.env.DATABASE_URL ? 'DATABASE_URL' : `${this.config.database.host}:${this.config.database.port}/${this.config.database.name}`,
       corsOrigins: this.config.security.corsOrigins.length,
       hasOpenAI: !!this.config.services.openaiApiKey,
       hasSentry: !!this.config.services.sentryDsn

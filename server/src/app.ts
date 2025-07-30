@@ -250,7 +250,10 @@ class MoneyWiseApp {
   // Get CORS origins
   private getCorsOrigins(): string[] {
     if (process.env.NODE_ENV === 'production') {
-      return process.env.FRONTEND_URL?.split(',') || ['https://your-domain.com'];
+      return [
+        'https://budget-app-orpin-nu.vercel.app',
+        process.env.FRONTEND_URL
+      ].filter((origin): origin is string => typeof origin === 'string' && origin.length > 0);
     }
     return [
       'http://localhost:3000',

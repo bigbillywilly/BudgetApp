@@ -13,14 +13,22 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 // Validate required environment variables
-const requiredEnvVars = [
-  'DB_HOST',
-  'DB_NAME',
-  'DB_USER',
-  'DB_PASSWORD',
+let requiredEnvVars = [
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET'
 ];
+
+// Only require individual DB vars if DATABASE_URL is not present
+if (!process.env.DATABASE_URL) {
+  requiredEnvVars.push(
+    'DB_HOST',
+    'DB_NAME',
+    'DB_USER',
+    'DB_PASSWORD'
+  );
+} else {
+  console.log('✅ Using DATABASE_URL - skipping individual DB variable validation');
+}
 
 const missingVars = requiredEnvVars.filter(varName => !process.env[varName]);
 

@@ -53,10 +53,10 @@ class DatabaseConfiguration {
         user: '',     // not used when DATABASE_URL is present
         password: '', // not used when DATABASE_URL is present
         ssl: true,
-        max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
+        max: parseInt(process.env.DB_MAX_CONNECTIONS || '10'), // Reduce for production
         min: parseInt(process.env.DB_MIN_CONNECTIONS || '2'),
         idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-        connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
+        connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000') // Increase timeout
       };
     }
 
@@ -152,7 +152,6 @@ class DatabaseConfiguration {
       return this.pool;
     }
 
-    // Use DATABASE_URL if available (production), otherwise use individual config (local dev)
     if (process.env.DATABASE_URL) {
       console.log('\n🔗 Creating pool with DATABASE_URL...');
       this.pool = new Pool({
@@ -161,7 +160,10 @@ class DatabaseConfiguration {
         max: this.config.max,
         min: this.config.min,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
-        connectionTimeoutMillis: this.config.connectionTimeoutMillis
+        connectionTimeoutMillis: this.config.connectionTimeoutMillis,
+        // Force IPv4
+        host: 'db.plnpicftnscwdaegwrzk.supabase.co', // Override IPv6
+        port: 5432
       });
       
       logInfo('Database pool created with DATABASE_URL', {
