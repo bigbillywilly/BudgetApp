@@ -22,8 +22,7 @@
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "declaration": false,
-    "removeComments": true,
-    "types": ["node"]
+    "removeComments": true
   },
   "include": [
     "src/**/*"
