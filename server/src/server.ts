@@ -7,11 +7,6 @@ dotenv.config();
 import MoneyWiseApp from './app';
 import { logInfo, logError } from './utils/logger';
 
-// Optimize for low memory
-if (process.env.NODE_ENV === 'production') {
-  process.env.NODE_OPTIONS = '--max_old_space_size=200 --optimize_for_size';
-}
-
 // Validate required environment variables
 let requiredEnvVars = [
   'JWT_ACCESS_SECRET',
