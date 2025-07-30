@@ -25,7 +25,6 @@
     /* Completeness */
     "skipLibCheck": true,
     "resolveJsonModule": true,
-    "types": ["node"],
     "declaration": false,
     "removeComments": true
   },
