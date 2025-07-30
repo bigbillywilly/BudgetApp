@@ -2,6 +2,10 @@
 import { Pool, PoolConfig } from 'pg';
 import { logInfo, logError, logWarn } from '../utils/logger';
 
+// Force IPv4 for Supabase connection
+const DATABASE_URL = process.env.DATABASE_URL;
+const DATABASE_URL_IPV4 = DATABASE_URL?.replace('db.plnpicftnscwdaegwrzk.supabase.co', '54.88.73.86'); // Use IP instead of hostname
+
 export interface DatabaseConfig {
   host?: string;
   port?: number;
