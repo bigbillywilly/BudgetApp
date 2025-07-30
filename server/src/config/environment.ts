@@ -151,7 +151,16 @@ class EnvironmentConfiguration {
     const frontendUrl = process.env.FRONTEND_URL;
     
     if (this.config?.nodeEnv === 'production') {
-      return frontendUrl ? frontendUrl.split(',').map(url => url.trim()) : ['https://your-domain.com'];
+      const defaultProductionOrigins = [
+        'https://budget-app-orpin-nu.vercel.app',
+        'https://budget-j1ryeavbj-willys-projects-a8ff841f.vercel.app'
+      ];
+      
+      if (frontendUrl) {
+        return [...frontendUrl.split(',').map(url => url.trim()), ...defaultProductionOrigins];
+      }
+      
+      return defaultProductionOrigins;
     }
 
     // Development origins
