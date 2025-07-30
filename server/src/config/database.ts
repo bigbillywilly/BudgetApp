@@ -3,16 +3,17 @@ import { Pool, PoolConfig } from 'pg';
 import { logInfo, logError, logWarn } from '../utils/logger';
 
 export interface DatabaseConfig {
-  host: string;
-  port: number;
-  database: string;
-  user: string;
-  password: string;
+  host?: string;
+  port?: number;
+  database?: string;
+  user?: string;
+  password?: string;
   ssl?: boolean;
   max: number;
   min: number;
   idleTimeoutMillis: number;
   connectionTimeoutMillis: number;
+  connectionString?: string;
 }
 
 class DatabaseConfiguration {
@@ -43,23 +44,20 @@ class DatabaseConfiguration {
     console.log('NODE_ENV:', process.env.NODE_ENV);
     console.log('All env keys that start with DB_:', Object.keys(process.env).filter(key => key.startsWith('DB_')));
 
-    // If DATABASE_URL is present (production), use simplified config
+    // Force DATABASE_URL usage in production
     if (process.env.DATABASE_URL) {
       console.log('\n✅ Using DATABASE_URL for connection');
       return {
-        host: '',  // not used when DATABASE_URL is present
-        port: 5432, // default fallback
-        database: '', // not used when DATABASE_URL is present
-        user: '',     // not used when DATABASE_URL is present
-        password: '', // not used when DATABASE_URL is present
+        connectionString: process.env.DATABASE_URL,
         ssl: true,
-        max: parseInt(process.env.DB_MAX_CONNECTIONS || '10'), // Reduce for production
-        min: parseInt(process.env.DB_MIN_CONNECTIONS || '2'),
-        idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
-        connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '10000') // Increase timeout
+        max: 10,
+        min: 2,
+        idleTimeoutMillis: 30000,
+        connectionTimeoutMillis: 10000
       };
     }
-
+    
+    // Fallback to individual config only if DATABASE_URL doesn't exist
     // Use individual environment variables (local development)
     const config = {
       host: process.env.DB_HOST || 'localhost',
@@ -103,7 +101,7 @@ class DatabaseConfiguration {
     }
 
     // Validate port
-    if (isNaN(this.config.port) || this.config.port <= 0 || this.config.port > 65535) {
+    if (isNaN(this.config.port ?? NaN) || (this.config.port ?? 0) <= 0 || (this.config.port ?? 0) > 65535) {
       throw new Error('Invalid database port number');
     }
 

@@ -15,14 +15,15 @@ if (process.env.NODE_ENV === 'production') {
 // Validate required environment variables
 let requiredEnvVars = [
   'JWT_ACCESS_SECRET',
-  'JWT_REFRESH_SECRET'
+  'JWT_REFRESH_SECRET',
+  'PORT'  // Add PORT validation
 ];
 
 // Only require individual DB vars if DATABASE_URL is not present
 if (!process.env.DATABASE_URL) {
   requiredEnvVars.push(
     'DB_HOST',
-    'DB_NAME',
+    'DB_NAME', 
     'DB_USER',
     'DB_PASSWORD'
   );
