@@ -152,8 +152,9 @@ class EnvironmentConfiguration {
     
     if (this.config?.nodeEnv === 'production') {
       const defaultProductionOrigins = [
-        'https://budget-app-orpin-nu.vercel.app',
-        'https://budget-j1ryeavbj-willys-projects-a8ff841f.vercel.app'
+        'https://budget-app-orpin-nu.vercel.app', // Main production URL
+        // If you need to support patterns, handle them elsewhere in your CORS middleware
+        // For now, only strings are allowed here
       ];
       
       if (frontendUrl) {
