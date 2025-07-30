@@ -19,16 +19,11 @@
     "strict": false,                                      
     "noImplicitAny": false,
     "strictNullChecks": false,
-    "noImplicitReturns": false,
-    "noFallthroughCasesInSwitch": false,
-
-    /* Completeness */
     "skipLibCheck": true,
     "resolveJsonModule": true,
     "declaration": false,
     "removeComments": true,
-    "typeRoots": ["./node_modules/@types"],
-    "types": []
+    "types": ["node"]
   },
   "include": [
     "src/**/*"
