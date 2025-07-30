@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "build": "node --max-old-space-size=2048 ./node_modules/.bin/tsc",
+    "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc",
     "start": "node dist/server.js",
     "render-start": "npm run build && npm start",
     "start:dev": "ts-node src/server.ts",
