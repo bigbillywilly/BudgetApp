@@ -34,6 +34,7 @@ class DatabaseConfiguration {
 
     // DEBUG: Log what environment variables we're seeing
     console.log('\n🔍 DEBUGGING ENVIRONMENT VARIABLES:');
+    console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
     console.log('DB_HOST:', process.env.DB_HOST);
     console.log('DB_PORT:', process.env.DB_PORT);
     console.log('DB_NAME:', process.env.DB_NAME);
@@ -42,6 +43,24 @@ class DatabaseConfiguration {
     console.log('NODE_ENV:', process.env.NODE_ENV);
     console.log('All env keys that start with DB_:', Object.keys(process.env).filter(key => key.startsWith('DB_')));
 
+    // If DATABASE_URL is present (production), use simplified config
+    if (process.env.DATABASE_URL) {
+      console.log('\n✅ Using DATABASE_URL for connection');
+      return {
+        host: '',  // not used when DATABASE_URL is present
+        port: 5432, // default fallback
+        database: '', // not used when DATABASE_URL is present
+        user: '',     // not used when DATABASE_URL is present
+        password: '', // not used when DATABASE_URL is present
+        ssl: true,
+        max: parseInt(process.env.DB_MAX_CONNECTIONS || '20'),
+        min: parseInt(process.env.DB_MIN_CONNECTIONS || '2'),
+        idleTimeoutMillis: parseInt(process.env.DB_IDLE_TIMEOUT || '30000'),
+        connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
+      };
+    }
+
+    // Use individual environment variables (local development)
     const config = {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
@@ -69,7 +88,13 @@ class DatabaseConfiguration {
   }
 
   private validateConfiguration(): void {
-    // Check required fields
+    // If using DATABASE_URL, skip individual field validation
+    if (process.env.DATABASE_URL) {
+      logInfo('Database configuration validated (using DATABASE_URL)');
+      return;
+    }
+
+    // Check required fields for individual config
     const requiredFields = ['host', 'database', 'user', 'password'];
     const missing = requiredFields.filter(field => !this.config[field as keyof DatabaseConfig]);
 
@@ -127,19 +152,37 @@ class DatabaseConfiguration {
       return this.pool;
     }
 
-    const poolConfig = this.getPoolConfig();
-    this.pool = new Pool(poolConfig);
+    // Use DATABASE_URL if available (production), otherwise use individual config (local dev)
+    if (process.env.DATABASE_URL) {
+      console.log('\n🔗 Creating pool with DATABASE_URL...');
+      this.pool = new Pool({
+        connectionString: process.env.DATABASE_URL,
+        ssl: { rejectUnauthorized: false },
+        max: this.config.max,
+        min: this.config.min,
+        idleTimeoutMillis: this.config.idleTimeoutMillis,
+        connectionTimeoutMillis: this.config.connectionTimeoutMillis
+      });
+      
+      logInfo('Database pool created with DATABASE_URL', {
+        maxConnections: this.config.max
+      });
+    } else {
+      console.log('\n🔗 Creating pool with individual config...');
+      const poolConfig = this.getPoolConfig();
+      this.pool = new Pool(poolConfig);
+      
+      logInfo('Database pool created with individual config', {
+        host: this.config.host,
+        port: this.config.port,
+        database: this.config.database,
+        maxConnections: this.config.max
+      });
+    }
 
     // Basic error handling
     this.pool.on('error', (err) => {
       logError('Database pool error', { error: err.message });
-    });
-
-    logInfo('Database pool created', {
-      host: this.config.host,
-      port: this.config.port, // Add port to the log
-      database: this.config.database,
-      maxConnections: this.config.max
     });
 
     return this.pool;
@@ -149,12 +192,16 @@ class DatabaseConfiguration {
     const testPool = pool || this.createPool();
     
     console.log('\n🧪 TESTING DATABASE CONNECTION...');
-    console.log('Using config:', {
-      host: this.config.host,
-      port: this.config.port,
-      database: this.config.database,
-      user: this.config.user
-    });
+    if (process.env.DATABASE_URL) {
+      console.log('Using DATABASE_URL connection');
+    } else {
+      console.log('Using individual config:', {
+        host: this.config.host,
+        port: this.config.port,
+        database: this.config.database,
+        user: this.config.user
+      });
+    }
     
     try {
       console.log('1. Attempting to get client from pool...');
@@ -170,9 +217,7 @@ class DatabaseConfiguration {
 
       logInfo('Database connection test successful', {
         currentTime: result.rows[0].current_time,
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
+        connectionMethod: process.env.DATABASE_URL ? 'DATABASE_URL' : 'individual_config',
         version: result.rows[0].version.split(' ').slice(0, 2).join(' ')
       });
 
@@ -188,10 +233,7 @@ class DatabaseConfiguration {
         errorMessage: error.message,
         errorCode: error.code,
         errorDetail: error.detail,
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
-        user: this.config.user
+        connectionMethod: process.env.DATABASE_URL ? 'DATABASE_URL' : 'individual_config'
       });
       
       return false;
@@ -214,8 +256,8 @@ class DatabaseConfiguration {
 
       // Get database size
       const sizeResult = await client.query(`
-        SELECT pg_size_pretty(pg_database_size($1)) as size
-      `, [this.config.database]);
+        SELECT pg_size_pretty(pg_database_size(current_database())) as size
+      `);
       const size = sizeResult.rows[0].size;
 
       // Get table count
