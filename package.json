@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "nodemon src/server.ts",
     "build": "cross-env NODE_OPTIONS=--max-old-space-size=4096 tsc",
-    "start": "node dist/server.js",
+    "start": "node --max_old_space_size=200 --optimize_for_size server.js",
     "render-start": "npm run build && npm start",
     "start:dev": "ts-node src/server.ts",
     "test": "jest",
