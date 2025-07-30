@@ -155,18 +155,15 @@ class DatabaseConfiguration {
     }
 
     if (process.env.DATABASE_URL) {
-      console.log('\n🔗 Creating pool with DATABASE_URL (FORCING IPv4 - AGGRESSIVE)...');
+      console.log('\n🔗 Creating pool with DATABASE_URL (IPv4 DNS forced)...');
       
-      // Parse the DATABASE_URL to extract components
-      const url = new URL(process.env.DATABASE_URL);
-      
-      // Force DNS to IPv4 at Node.js level
+      // Force IPv4 at Node.js DNS level
       const dns = require('dns');
       dns.setDefaultResultOrder('ipv4first');
       
-      // Use a known working Supabase IPv4 address
+      // Use original hostname but with IPv4 forced
       this.pool = new Pool({
-        host: '3.120.254.237', // Alternative Supabase IPv4 IP
+        host: 'db.plnpicftnscwdaegwrzk.supabase.co',
         port: 5432,
         database: 'postgres',
         user: 'postgres',
@@ -175,11 +172,11 @@ class DatabaseConfiguration {
         max: this.config.max,
         min: this.config.min,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
-        connectionTimeoutMillis: this.config.connectionTimeoutMillis
+        connectionTimeoutMillis: 15000 // Increase timeout
       });
       
-      logInfo('Database pool created with aggressive IPv4 forcing', {
-        host: '3.120.254.237',
+      logInfo('Database pool created with hostname and IPv4 DNS forcing', {
+        host: 'db.plnpicftnscwdaegwrzk.supabase.co',
         maxConnections: this.config.max
       });
     } else {
