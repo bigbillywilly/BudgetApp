@@ -155,30 +155,18 @@ class DatabaseConfiguration {
     }
 
     if (process.env.DATABASE_URL) {
-      console.log('\n🔗 Creating pool with DATABASE_URL (IPv4 DNS forced)...');
+      console.log('\n🔗 Creating pool with Supabase Session Pooler...');
       
-      // Force IPv4 at Node.js DNS level
-      const dns = require('dns');
-      dns.setDefaultResultOrder('ipv4first');
-      
-      // Use original hostname but with IPv4 forced
       this.pool = new Pool({
-        host: 'db.plnpicftnscwdaegwrzk.supabase.co',
-        port: 5432,
-        database: 'postgres',
-        user: 'postgres',
-        password: 'agNcMmWVuKndFcoP',
+        connectionString: process.env.DATABASE_URL, // Session pooler URL
         ssl: { rejectUnauthorized: false },
-        max: this.config.max,
-        min: this.config.min,
+        max: 5, // Lower max for session pooler
+        min: 1,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
-        connectionTimeoutMillis: 15000 // Increase timeout
+        connectionTimeoutMillis: 15000
       });
       
-      logInfo('Database pool created with hostname and IPv4 DNS forcing', {
-        host: 'db.plnpicftnscwdaegwrzk.supabase.co',
-        maxConnections: this.config.max
-      });
+      logInfo('Database pool created with Supabase Session Pooler');
     } else {
       console.log('\n🔗 Creating pool with individual config...');
       const poolConfig = this.getPoolConfig();
