@@ -155,13 +155,14 @@ class DatabaseConfiguration {
     }
 
     if (process.env.DATABASE_URL) {
-      console.log('\n🔗 Creating pool with DATABASE_URL...');
+      console.log('\n🔗 Creating pool with DATABASE_URL (FORCING IPv4)...');
       
       // Parse the DATABASE_URL to extract components
       const url = new URL(process.env.DATABASE_URL);
       
+      // Use direct IP address to avoid DNS resolution to IPv6
       this.pool = new Pool({
-        host: 'db.plnpicftnscwdaegwrzk.supabase.co', // Force hostname instead of using URL parsing
+        host: '54.213.83.132', // Direct IPv4 IP for db.plnpicftnscwdaegwrzk.supabase.co
         port: 5432,
         database: url.pathname.slice(1), // Remove leading slash
         user: url.username,
@@ -170,13 +171,11 @@ class DatabaseConfiguration {
         max: this.config.max,
         min: this.config.min,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
-        connectionTimeoutMillis: this.config.connectionTimeoutMillis,
-        // Force IPv4 by setting family
-        options: '-c default_transaction_isolation=read_committed'
+        connectionTimeoutMillis: this.config.connectionTimeoutMillis
       });
       
-      logInfo('Database pool created with parsed DATABASE_URL', {
-        host: 'db.plnpicftnscwdaegwrzk.supabase.co',
+      logInfo('Database pool created with direct IPv4 IP', {
+        host: '54.213.83.132',
         maxConnections: this.config.max
       });
     } else {
