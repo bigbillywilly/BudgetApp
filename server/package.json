@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "nodemon src/server.ts",
-    "build": "NODE_OPTIONS='--max-old-space-size=4096' tsc",
+    "build": "cross-env NODE_OPTIONS='--max-old-space-size=4096' tsc",  
     "start": "node dist/server.js",
     "render-start": "npm run build && npm start",
     "start:dev": "ts-node src/server.ts",
@@ -74,6 +74,7 @@
     "@types/winston": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^6.21.0",
     "@typescript-eslint/parser": "^6.21.0",
+    "cross-env": "^10.0.0",
     "eslint": "^8.57.1",
     "eslint-config-prettier": "^10.1.5",
     "eslint-plugin-import": "^2.32.0",

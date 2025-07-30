@@ -1,5 +1,24 @@
-node_modules
-# Keep environment variables out of version control
+# Node.js
+node_modules/
+dist/
+logs/
+uploads/
+
+# Prisma (if you generate locally)
+generated/
+prisma/generated/
+
+# Environment Variables
 .env
 
-/generated/prisma
+# Build Artifacts
+*.tsbuildinfo
+
+# Logs & temp files
+*.log
+
+# macOS / IDE / System files
+.DS_Store
+
+*.sqlite
+*.dump
