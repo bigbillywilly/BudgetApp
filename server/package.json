@@ -58,7 +58,7 @@
     "@types/multer": "^2.0.0",
     "@types/node": "^24.1.0",
     "@types/papaparse": "^5.3.16",
-    "@types/pg": "^8.15.4",
+    "@types/pg": "^8.15.5",
     "@types/uuid": "^10.0.0",
     "@types/winston": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^6.21.0",

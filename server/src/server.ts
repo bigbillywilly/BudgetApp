@@ -11,7 +11,7 @@ import { logInfo, logError } from './utils/logger';
 let requiredEnvVars = [
   'JWT_ACCESS_SECRET',
   'JWT_REFRESH_SECRET',
-  'PORT'  // Add PORT validation
+  'PORT'
 ];
 
 // Only require individual DB vars if DATABASE_URL is not present
@@ -64,12 +64,12 @@ async function startServer(): Promise<void> {
 }
 
 // Handle uncaught errors
-process.on('uncaughtException', (error) => {
+process.on('uncaughtException', (error: Error) => {
   console.error('❌ Uncaught Exception:', error);
   process.exit(1);
 });
 
-process.on('unhandledRejection', (reason) => {
+process.on('unhandledRejection', (reason: unknown) => {
   console.error('❌ Unhandled Promise Rejection:', reason);
   process.exit(1);
 });
