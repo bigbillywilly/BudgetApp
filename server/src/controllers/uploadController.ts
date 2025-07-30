@@ -24,7 +24,7 @@ const storage = multer.diskStorage({
   }
 });
 
-const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+const fileFilter = (req: any, file: any, cb: multer.FileFilterCallback) => {
   if (file.mimetype === 'text/csv' || file.originalname.endsWith('.csv')) {
     cb(null, true);
   } else {
@@ -42,8 +42,8 @@ export const upload = multer({
 });
 
 interface MulterRequest extends Request { 
-  file?: Express.Multer.File; 
-  files?: Express.Multer.File[] | { [fieldname: string]: Express.Multer.File[] };
+  file?: any;
+  files?: any;
 }
 
 class UploadController {
