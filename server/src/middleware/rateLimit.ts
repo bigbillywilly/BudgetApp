@@ -6,11 +6,7 @@ import { getConfig } from '../config/environment';
 
 const config = getConfig();
 
-// =============================================================================
-// RATE LIMITER CONFIGURATIONS
-// =============================================================================
-
-// Base rate limiter configuration
+// Fix the createLimiter function
 const createLimiter = (options: {
   windowMs: number;
   max: number;
@@ -22,28 +18,29 @@ const createLimiter = (options: {
 }) => {
   return rateLimit({
     windowMs: options.windowMs,
-    limit: options.max, // Updated from 'max' to 'limit'
+    limit: options.max,
     message: {
       success: false,
       error: options.message,
       retryAfter: Math.ceil(options.windowMs / 1000),
       timestamp: new Date().toISOString()
     },
-    standardHeaders: 'draft-7', // Updated to use latest standard
+    standardHeaders: 'draft-7',
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests || false,
     skipFailedRequests: options.skipFailedRequests || false,
-    keyGenerator: options.keyGenerator || ((req: Request) => {
-      // Use user ID if authenticated, otherwise fall back to IP using built-in helper
-      const userId = req.user?.userId;
-      if (userId) return userId;
-      
-      // Use the built-in IP helper for safe IPv4/IPv6 handling
-      return req.ip || 'unknown';
-    }),
+    
+    // REMOVE CUSTOM keyGenerator - let express-rate-limit handle IP automatically
+    // keyGenerator: options.keyGenerator || ((req: Request) => {
+    //   // Use user ID if authenticated, otherwise fall back to IP
+    //   const userId = req.user?.userId;
+    //   if (userId) return userId;
+    //   return req.ip || 'unknown';
+    // }),
+    
     handler: (req: Request, res: Response) => {
       const identifier = req.user?.userId || req.ip;
-      logWarn('Rate limit exceeded', {
+      console.warn('Rate limit exceeded', {
         identifier,
         endpoint: req.path,
         method: req.method,
@@ -92,10 +89,6 @@ export const authLimiter = createLimiter({
   max: config.rateLimit.authMaxRequests, // 5 auth attempts per window
   message: 'Too many authentication attempts, please try again later.',
   skipSuccessfulRequests: true, // Don't count successful logins
-  keyGenerator: (req: Request) => {
-    // For auth, always use IP with built-in helper for safe handling
-    return req.ip || 'unknown';
-  },
   onLimitReached: (req, res) => {
     logWarn('Auth rate limit exceeded - potential brute force attack', {
       ip: req.ip,
@@ -111,12 +104,6 @@ export const passwordResetLimiter = createLimiter({
   windowMs: 60 * 60 * 1000, // 1 hour
   max: 3, // Only 3 password reset attempts per hour
   message: 'Too many password reset attempts, please try again in an hour.',
-  keyGenerator: (req: Request) => {
-    // Use email + IP for password reset limiting
-    const email = req.body?.email;
-    const ip = req.ip || 'unknown';
-    return email ? `${email}-${ip}` : ip;
-  },
   onLimitReached: (req, res) => {
     logWarn('Password reset rate limit exceeded', {
       email: req.body?.email,
@@ -149,10 +136,6 @@ export const dailyUploadLimiter = createLimiter({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 50, // 50 uploads per day per user
   message: 'Daily upload limit reached, please try again tomorrow.',
-  keyGenerator: (req: Request) => {
-    // Always use user ID for daily limits
-    return req.user?.userId || req.ip || 'unknown';
-  },
   onLimitReached: (req, res) => {
     logWarn('Daily upload limit exceeded', {
       user: req.user?.userId,
@@ -225,10 +208,7 @@ export const transactionWriteLimiter = createLimiter({
 export const emailVerificationLimiter = createLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 5, // 5 verification attempts per window
-  message: 'Too many email verification attempts, please try again later.',
-  keyGenerator: (req: Request) => {
-    return req.ip || 'unknown';
-  }
+  message: 'Too many email verification attempts, please try again later.'
 });
 
 // Account deletion limiter (very strict)
@@ -236,9 +216,6 @@ export const accountDeletionLimiter = createLimiter({
   windowMs: 24 * 60 * 60 * 1000, // 24 hours
   max: 1, // Only 1 deletion attempt per day
   message: 'Account deletion limit reached, please contact support if you need assistance.',
-  keyGenerator: (req: Request) => {
-    return req.user?.userId || req.ip || 'unknown';
-  },
   onLimitReached: (req, res) => {
     logWarn('Account deletion rate limit exceeded', {
       user: req.user?.userId,
@@ -357,10 +334,6 @@ export const combineRateLimiters = (...limiters: any[]) => {
       currentIndex++;
       
       limiter(req, res, (err?: any) => {
-        if (err) {
-          return next(err);
-        }
-        runNextLimiter();
       });
     };
     
