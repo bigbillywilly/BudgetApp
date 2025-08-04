@@ -1,37 +1,30 @@
 // server/src/routes/financial.routes.ts - COMPLETE REPLACEMENT
 import { Router } from 'express';
-import { Pool } from 'pg';
 import { db } from '../database/connection';
 import { authenticateToken } from '../middleware/auth';
 import { logInfo, logError } from '../utils/logger';
 
 const router = Router();
 
-console.log('💰 Loading REAL financial routes with database integration...');
+console.log('Loading financial routes with database integration...');
 
-// Apply authentication to all financial routes
+// All financial routes require authentication
 router.use(authenticateToken);
 
-// GET /api/financial/current - Get current month financial data FROM DATABASE
+// Get current month financial data
 router.get('/current', async (req, res) => {
   const pool = db.getPool();
-  
   try {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-
     const userId = req.user.userId;
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth() + 1;
     const currentYear = currentDate.getFullYear();
 
-    logInfo('Getting current month financial data from DATABASE', { userId, month: currentMonth, year: currentYear });
+    logInfo('Getting current month financial data from database', { userId, month: currentMonth, year: currentYear });
 
-    // Get monthly data from database
     const result = await pool.query(`
       SELECT month, year, income, fixed_expenses, savings_goal, created_at, updated_at
       FROM monthly_data 
@@ -40,13 +33,6 @@ router.get('/current', async (req, res) => {
 
     if (result.rows.length > 0) {
       const data = result.rows[0];
-      
-      console.log('✅ Found existing monthly data in DATABASE:', {
-        income: data.income,
-        fixedExpenses: data.fixed_expenses,
-        savingsGoal: data.savings_goal
-      });
-      
       res.json({
         success: true,
         data: {
@@ -60,8 +46,6 @@ router.get('/current', async (req, res) => {
         }
       });
     } else {
-      console.log('ℹ️ No monthly data found in DATABASE, returning defaults');
-      
       // Return default structure for new users
       res.json({
         success: true,
@@ -75,58 +59,36 @@ router.get('/current', async (req, res) => {
       });
     }
   } catch (error) {
-    logError('Failed to get current month data from DATABASE', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get current month data'
-    });
+    logError('Failed to get current month data from database', error);
+    res.status(500).json({ success: false, message: 'Failed to get current month data' });
   }
 });
 
-// POST /api/financial/current - Update current month financial data IN DATABASE
+// Update current month financial data (upsert)
 router.post('/current', async (req, res) => {
   const pool = db.getPool();
-  
   try {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-
     const userId = req.user.userId;
     const { income, fixedExpenses, savingsGoal } = req.body;
-    
-    // Validate input
-    if (typeof income !== 'number' || typeof fixedExpenses !== 'number' || typeof savingsGoal !== 'number') {
-      return res.status(400).json({
-        success: false,
-        message: 'Income, fixed expenses, and savings goal must be numbers'
-      });
-    }
 
+    // Input validation
+    if (typeof income !== 'number' || typeof fixedExpenses !== 'number' || typeof savingsGoal !== 'number') {
+      return res.status(400).json({ success: false, message: 'Income, fixed expenses, and savings goal must be numbers' });
+    }
     if (income < 0 || fixedExpenses < 0 || savingsGoal < 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'Values cannot be negative'
-      });
+      return res.status(400).json({ success: false, message: 'Values cannot be negative' });
     }
 
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth() + 1;
     const currentYear = currentDate.getFullYear();
 
-    logInfo('Updating current month financial data in DATABASE', { 
-      userId, 
-      month: currentMonth, 
-      year: currentYear,
-      income,
-      fixedExpenses,
-      savingsGoal
-    });
+    logInfo('Updating current month financial data in database', { userId, month: currentMonth, year: currentYear, income, fixedExpenses, savingsGoal });
 
-    // Use UPSERT (INSERT ... ON CONFLICT) to handle both new and existing records
+    // UPSERT for monthly_data
     const result = await pool.query(`
       INSERT INTO monthly_data (user_id, month, year, income, fixed_expenses, savings_goal)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -140,13 +102,6 @@ router.post('/current', async (req, res) => {
     `, [userId, currentMonth, currentYear, income, fixedExpenses, savingsGoal]);
 
     const data = result.rows[0];
-    
-    console.log('✅ Monthly financial data SAVED TO DATABASE:', {
-      income: data.income,
-      fixedExpenses: data.fixed_expenses,
-      savingsGoal: data.savings_goal
-    });
-
     res.json({
       success: true,
       message: 'Financial data updated successfully in database',
@@ -161,30 +116,22 @@ router.post('/current', async (req, res) => {
       }
     });
   } catch (error) {
-    logError('Failed to update current month data in DATABASE', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update financial data'
-    });
+    logError('Failed to update current month data in database', error);
+    res.status(500).json({ success: false, message: 'Failed to update financial data' });
   }
 });
 
-// GET /api/financial/historical - Get historical financial data FROM DATABASE
+// Get historical financial data (default: last 12 months)
 router.get('/historical', async (req, res) => {
   const pool = db.getPool();
-  
   try {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-
     const userId = req.user.userId;
-    const limit = parseInt(req.query.limit as string) || 12; // Default 12 months
+    const limit = parseInt(req.query.limit as string) || 12;
 
-    logInfo('Getting historical financial data from DATABASE', { userId, limit });
+    logInfo('Getting historical financial data from database', { userId, limit });
 
     const result = await pool.query(`
       SELECT month, year, income, fixed_expenses, savings_goal, created_at, updated_at
@@ -205,39 +152,29 @@ router.get('/historical', async (req, res) => {
       updatedAt: row.updated_at
     }));
 
-    console.log('✅ Retrieved historical data from DATABASE:', { count: historicalData.length });
-
     res.json({
       success: true,
       data: historicalData
     });
   } catch (error) {
-    logError('Failed to get historical data from DATABASE', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get historical data'
-    });
+    logError('Failed to get historical data from database', error);
+    res.status(500).json({ success: false, message: 'Failed to get historical data' });
   }
 });
 
-// GET /api/financial/summary - Get comprehensive financial summary
+// Get comprehensive financial summary for current month
 router.get('/summary', async (req, res) => {
   const pool = db.getPool();
-  
   try {
     if (!req.user) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
+      return res.status(401).json({ success: false, message: 'Authentication required' });
     }
-
     const userId = req.user.userId;
     const currentDate = new Date();
     const currentMonth = currentDate.getMonth() + 1;
     const currentYear = currentDate.getFullYear();
 
-    logInfo('Getting financial summary from DATABASE', { userId });
+    logInfo('Getting financial summary from database', { userId });
 
     // Get budget data
     const budgetResult = await pool.query(`
@@ -249,7 +186,7 @@ router.get('/summary', async (req, res) => {
     // Get current month spending from transactions
     const startOfMonth = new Date(currentYear, currentMonth - 1, 1);
     const endOfMonth = new Date(currentYear, currentMonth, 0);
-    
+
     const spendingResult = await pool.query(`
       SELECT 
         SUM(CASE WHEN type = 'expense' THEN ABS(amount) ELSE 0 END) as total_spent,
@@ -265,13 +202,6 @@ router.get('/summary', async (req, res) => {
 
     const availableToSpend = parseFloat(budget.income) - parseFloat(budget.fixed_expenses) - parseFloat(budget.savings_goal);
     const totalSpent = parseFloat(spending.total_spent) || 0;
-
-    console.log('✅ Financial summary calculated from DATABASE:', {
-      budgetIncome: budget.income,
-      availableToSpend,
-      actualSpent: totalSpent,
-      transactionCount: spending.transaction_count
-    });
 
     res.json({
       success: true,
@@ -294,41 +224,31 @@ router.get('/summary', async (req, res) => {
       }
     });
   } catch (error) {
-    logError('Failed to get financial summary from DATABASE', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to get financial summary'
-    });
+    logError('Failed to get financial summary from database', error);
+    res.status(500).json({ success: false, message: 'Failed to get financial summary' });
   }
 });
 
-// Development test route
+// Development-only test route for database connectivity and schema checks
 if (process.env.NODE_ENV === 'development') {
   router.get('/test', async (req, res) => {
     const pool = db.getPool();
-    
     try {
-      console.log('✅ Financial test route hit - testing DATABASE connection');
-      
-      // Test database connection
+      // Test database connection and schema
       const dbTest = await pool.query('SELECT NOW() as current_time');
-      
-      // Test if monthly_data table exists
       const tableTest = await pool.query(`
         SELECT table_name 
         FROM information_schema.tables 
         WHERE table_schema = 'public' AND table_name = 'monthly_data'
       `);
-      
-      // Test if user has any data
       const userDataTest = req.user ? await pool.query(
         'SELECT COUNT(*) as count FROM monthly_data WHERE user_id = $1',
         [req.user.userId]
       ) : null;
-      
+
       res.json({ 
         success: true,
-        message: 'Financial routes are working with REAL DATABASE controllers!',
+        message: 'Financial routes are working with real database controllers',
         tests: {
           databaseConnection: dbTest.rows[0],
           monthlyDataTable: tableTest.rows.length > 0 ? 'EXISTS' : 'MISSING',
@@ -338,7 +258,6 @@ if (process.env.NODE_ENV === 'development') {
         timestamp: new Date().toISOString()
       });
     } catch (error) {
-      console.error('❌ Financial test route failed:', error);
       res.status(500).json({
         success: false,
         message: 'Financial routes test failed',
@@ -348,6 +267,6 @@ if (process.env.NODE_ENV === 'development') {
   });
 }
 
-console.log('✅ Real financial routes configured with DATABASE controllers');
+console.log('Real financial routes configured with database controllers');
 
 export { router as financialRoutes };

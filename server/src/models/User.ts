@@ -1,4 +1,5 @@
 // server/src/models/User.ts
+// User model for authentication and profile management
 export interface User {
   id: string;
   email: string;
@@ -13,6 +14,7 @@ export interface User {
   updated_at: Date;
 }
 
+// DTO for creating a new user
 export interface CreateUserData {
   email: string;
   name: string;
@@ -20,6 +22,7 @@ export interface CreateUserData {
   email_verification_token?: string;
 }
 
+// DTO for updating user fields (partial update)
 export interface UpdateUserData {
   name?: string;
   email_verified?: boolean;

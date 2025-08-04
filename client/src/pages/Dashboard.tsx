@@ -1,9 +1,11 @@
-// client/src/pages/Dashboard.tsx - PAYCHECK-FOCUSED VERSION
+// Dashboard page for paycheck-focused budget management and financial tracking
+// Handles paycheck frequency calculation, budget setup, and CSV upload analysis
 import React, { useState } from 'react';
 import { DollarSign, TrendingUp, Target, Upload, BarChart3, Calendar, Briefcase } from 'lucide-react';
 import { useBudget } from '../context/budgetContext';
 import SmartCSVUpload from '../components/dashboard/SmartCSVUpload';
 
+// CSV upload result structure with budget analysis
 interface UploadResult {
   uploadId: string;
   filename: string;
@@ -17,7 +19,7 @@ interface UploadResult {
   categoryBreakdown: { [category: string]: { total: number; count: number } };
 }
 
-// Paycheck frequency options
+// Paycheck frequency configuration with monthly multipliers
 const PaycheckFrequencies = {
   weekly: { label: 'Weekly', multiplier: 4.33, icon: 'Calendar', description: 'Every Friday' },
   biweekly: { label: 'Bi-weekly', multiplier: 2.17, icon: 'Briefcase', description: 'Every 2 weeks' },
@@ -28,38 +30,38 @@ const PaycheckFrequencies = {
 type PaycheckFrequency = keyof typeof PaycheckFrequencies;
 
 const Dashboard: React.FC = () => {
-  // Use budget context instead of local state
+  // Budget context provides centralized state management
   const { budget, isLoading: budgetLoading, updateBudget, refreshBudget } = useBudget();
   
-  // FIXED: Start in editing mode if no budget is set
+  // Start in editing mode if no budget is configured
   const [isEditing, setIsEditing] = useState(!budget.hasSetBudget);
   const [isSaving, setIsSaving] = useState(false);
   const [recentUpload, setRecentUpload] = useState<UploadResult | null>(null);
   const [showUpload, setShowUpload] = useState(false);
   
-  // Paycheck-focused state
+  // Paycheck frequency state for income calculations
   const [paycheckFrequency, setPaycheckFrequency] = useState<PaycheckFrequency>('biweekly');
   
-  // FIXED: Local state for editing with string values to handle input properly
+  // Local editing state with string values for proper input handling
   const [editingData, setEditingData] = useState({
-    paycheckAmount: '', // This is the individual paycheck amount
+    paycheckAmount: '', // Individual paycheck amount before frequency calculation
     fixedExpenses: budget.fixedExpenses > 0 ? budget.fixedExpenses.toString() : '',
     savingsGoal: budget.savingsGoal > 0 ? budget.savingsGoal.toString() : '',
   });
 
-  // Calculate monthly income from paycheck amount and frequency
+  // Convert individual paycheck amount to monthly income based on frequency
   const calculateMonthlyIncome = (paycheckAmount: number, frequency: PaycheckFrequency): number => {
     return paycheckAmount * PaycheckFrequencies[frequency].multiplier;
   };
 
-  // Calculate paycheck amount from monthly income (for display)
+  // Convert monthly income back to individual paycheck amount for display
   const calculatePaycheckAmount = (monthlyIncome: number, frequency: PaycheckFrequency): number => {
     return monthlyIncome / PaycheckFrequencies[frequency].multiplier;
   };
 
-  // Update editing data when budget changes
+  // Sync editing data when budget context changes
   React.useEffect(() => {
-    // Calculate the paycheck amount based on current monthly income
+    // Calculate current paycheck amount from monthly income
     const estimatedPaycheckAmount = budget.income > 0 
       ? calculatePaycheckAmount(budget.income, paycheckFrequency) 
       : 0;
@@ -70,15 +72,15 @@ const Dashboard: React.FC = () => {
       savingsGoal: budget.savingsGoal > 0 ? budget.savingsGoal.toString() : '',
     });
     
-    // FIXED: If no budget is set, automatically enter editing mode
+    // Auto-enter editing mode for new users without budget setup
     if (!budget.hasSetBudget && !isEditing) {
       setIsEditing(true);
     }
   }, [budget, paycheckFrequency, isEditing]);
 
-  // FIXED: Handle input changes properly
+  // Handle numeric input changes with validation
   const handleInputChange = (field: string, value: string) => {
-    // Allow empty string or valid decimal numbers
+    // Allow empty string or valid decimal numbers only
     if (value === '' || /^\d*\.?\d*$/.test(value)) {
       setEditingData(prev => ({
         ...prev,
@@ -87,12 +89,12 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Update paycheck frequency and recalculate amounts
   const handleFrequencyChange = (frequency: PaycheckFrequency) => {
     const currentPaycheckAmount = parseFloat(editingData.paycheckAmount) || 0;
     setPaycheckFrequency(frequency);
     
-    // If we have a current paycheck amount, keep the monthly income the same
-    // but recalculate the paycheck amount for the new frequency
+    // Maintain consistent monthly income when changing frequency
     if (currentPaycheckAmount > 0) {
       const currentMonthlyIncome = calculateMonthlyIncome(currentPaycheckAmount, paycheckFrequency);
       const newPaycheckAmount = calculatePaycheckAmount(currentMonthlyIncome, frequency);
@@ -104,12 +106,14 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Save budget data to backend with validation
   const handleSave = async () => {
     const paycheckAmount = parseFloat(editingData.paycheckAmount) || 0;
     const monthlyIncome = calculateMonthlyIncome(paycheckAmount, paycheckFrequency);
     const fixedExpenses = parseFloat(editingData.fixedExpenses) || 0;
     const savingsGoal = parseFloat(editingData.savingsGoal) || 0;
 
+    // Validate input values before saving
     if (paycheckAmount <= 0 || fixedExpenses < 0 || savingsGoal < 0) {
       alert('Please enter valid amounts');
       return;
@@ -119,7 +123,7 @@ const Dashboard: React.FC = () => {
     
     try {
       const result = await updateBudget({
-        income: monthlyIncome, // Save the calculated monthly income
+        income: monthlyIncome, // Save calculated monthly income to backend
         fixedExpenses,
         savingsGoal
       });
@@ -138,24 +142,27 @@ const Dashboard: React.FC = () => {
     }
   };
 
+  // Handle CSV upload completion and refresh budget data
   const handleUploadComplete = async (uploadData: any) => {
     console.log('CSV upload completed:', uploadData);
     setRecentUpload(uploadData);
     setShowUpload(false);
     
-    // Refresh budget data in case it was updated
+    // Refresh budget context in case transactions affected budget calculations
     await refreshBudget();
   };
 
+  // Calculate savings rate as percentage of income
   const savingsRate = budget.income > 0 ? (budget.savingsGoal / budget.income) * 100 : 0;
 
-  // Calculate current paycheck info for display
+  // Current paycheck information for display
   const currentPaycheckAmount = budget.income > 0 
     ? calculatePaycheckAmount(budget.income, paycheckFrequency) 
     : 0;
   
   const paycheckInfo = PaycheckFrequencies[paycheckFrequency];
 
+  // Map icon names to components for frequency display
   const getIconComponent = (iconName: string) => {
     switch (iconName) {
       case 'Calendar': return <Calendar className="w-6 h-6" />;
@@ -165,7 +172,7 @@ const Dashboard: React.FC = () => {
     }
   };
 
-  // Show loading while budget data is being fetched
+  // Show loading state while budget data is being fetched
   if (budgetLoading) {
     return (
       <div className="max-w-6xl mx-auto space-y-8">
@@ -179,7 +186,7 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8">
-      {/* Header */}
+      {/* Dashboard header with branding */}
       <div className="text-center">
         <div className="w-20 h-20 bg-gradient-to-br from-blue-500 to-purple-600 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
           <BarChart3 className="w-10 h-10 text-white" />
@@ -190,7 +197,7 @@ const Dashboard: React.FC = () => {
         <p className="text-gray-600 text-lg">Track your paychecks, expenses, and savings goals</p>
       </div>
 
-      {/* Paycheck Setup Card */}
+      {/* Main budget setup card with paycheck focus */}
       <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/20">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center space-x-3">
@@ -200,6 +207,7 @@ const Dashboard: React.FC = () => {
               <p className="text-gray-600">Enter your individual paycheck amount and frequency</p>
             </div>
           </div>
+          {/* Edit button for existing budget configurations */}
           {budget.hasSetBudget && !isEditing && (
             <button
               onClick={() => setIsEditing(true)}
@@ -211,9 +219,9 @@ const Dashboard: React.FC = () => {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Left Column: Paycheck Information */}
+          {/* Left column: Paycheck configuration */}
           <div className="space-y-6">
-            {/* Paycheck Frequency Selector */}
+            {/* Paycheck frequency selector with visual grid */}
             <div className="space-y-3">
               <label className="block text-sm font-medium text-gray-700">
                 How often do you get paid?
@@ -232,7 +240,6 @@ const Dashboard: React.FC = () => {
                     } ${(budget.hasSetBudget && !isEditing) ? 'opacity-50 cursor-not-allowed' : ''}`}
                   >
                     <div className="flex items-center space-x-3">
-                      {/* {getIconComponent(info.icon)} */}
                       <div>
                         <div className="font-semibold text-gray-900">{info.label}</div>
                         <div className="text-sm text-gray-600">{info.description}</div>
@@ -243,7 +250,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Individual Paycheck Amount */}
+            {/* Individual paycheck amount input */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Individual Paycheck Amount ({paycheckInfo.label})
@@ -264,7 +271,7 @@ const Dashboard: React.FC = () => {
               </p>
             </div>
 
-            {/* Monthly Income Preview */}
+            {/* Monthly income preview with frequency calculation */}
             {(editingData.paycheckAmount || budget.hasSetBudget) && (
               <div className="p-4 bg-blue-50 rounded-xl border border-blue-200">
                 <div className="flex items-center justify-between">
@@ -286,9 +293,9 @@ const Dashboard: React.FC = () => {
             )}
           </div>
 
-          {/* Right Column: Expenses */}
+          {/* Right column: Fixed expenses and savings */}
           <div className="space-y-6">
-            {/* Fixed Expenses */}
+            {/* Fixed monthly expenses input */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Fixed Monthly Expenses
@@ -307,7 +314,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Savings Goal */}
+            {/* Monthly savings goal input */}
             <div className="space-y-2">
               <label className="block text-sm font-medium text-gray-700">
                 Monthly Savings Goal
@@ -325,7 +332,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            {/* Available to Spend Preview */}
+            {/* Available spending preview with real-time calculation */}
             {(editingData.paycheckAmount && editingData.fixedExpenses && editingData.savingsGoal) && (
               <div className="p-4 bg-green-50 rounded-xl border border-green-200">
                 <div className="flex items-center justify-between">
@@ -349,15 +356,15 @@ const Dashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* Budget Summary */}
+        {/* Comprehensive budget breakdown summary */}
         {budget.hasSetBudget && (
           <div className="mt-8 p-6 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl border border-blue-200">
             <h4 className="text-lg font-semibold text-gray-900 mb-4">Your Paycheck Breakdown</h4>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Per paycheck amount */}
               <div className="text-center">
                 <div className="flex items-center justify-center space-x-2 mb-2">
-                  {/* {getIconComponent(paycheckInfo.icon)} */}
                   <div>
                     <p className="text-xl font-bold text-green-600">
                       ${currentPaycheckAmount.toLocaleString()}
@@ -367,6 +374,7 @@ const Dashboard: React.FC = () => {
                 </div>
               </div>
               
+              {/* Monthly total income */}
               <div className="text-center">
                 <p className="text-xl font-bold text-blue-600">
                   ${budget.income.toLocaleString()}
@@ -375,6 +383,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-xs text-gray-500">{paycheckInfo.multiplier.toFixed(1)} paychecks</p>
               </div>
               
+              {/* Combined fixed costs */}
               <div className="text-center">
                 <p className="text-xl font-bold text-red-600">
                   ${(budget.fixedExpenses + budget.savingsGoal).toLocaleString()}
@@ -383,6 +392,7 @@ const Dashboard: React.FC = () => {
                 <p className="text-xs text-gray-500">Expenses + Savings</p>
               </div>
               
+              {/* Available flexible spending */}
               <div className="text-center">
                 <p className={`text-xl font-bold ${budget.availableToSpend >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
                   ${budget.availableToSpend.toLocaleString()}
@@ -394,6 +404,7 @@ const Dashboard: React.FC = () => {
               </div>
             </div>
             
+            {/* Budget health indicators and metrics */}
             <div className="mt-6 pt-4 border-t border-blue-200">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Savings Rate: {savingsRate.toFixed(1)}%</span>
@@ -411,7 +422,7 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Save and cancel action buttons for editing mode */}
         {(isEditing || !budget.hasSetBudget) && (
           <div className="flex space-x-4 mt-6">
             <button
@@ -421,11 +432,12 @@ const Dashboard: React.FC = () => {
             >
               {isSaving ? 'Saving...' : 'Save Paycheck Budget'}
             </button>
+            {/* Cancel button for existing budget modifications */}
             {isEditing && budget.hasSetBudget && (
               <button
                 onClick={() => {
                   setIsEditing(false);
-                  // Reset editing data to current budget
+                  // Reset editing data to current budget values
                   const estimatedPaycheckAmount = budget.income > 0 
                     ? calculatePaycheckAmount(budget.income, paycheckFrequency) 
                     : 0;
@@ -445,9 +457,10 @@ const Dashboard: React.FC = () => {
         )}
       </div>
 
-      {/* CSV Upload Section */}
+      {/* CSV upload section for transaction analysis */}
       {budget.hasSetBudget && (
         <div className="space-y-6">
+          {/* Upload prompt when no recent upload or active upload */}
           {!showUpload && !recentUpload && (
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/20 text-center">
               <Upload className="w-16 h-16 text-gray-400 mx-auto mb-4" />
@@ -464,11 +477,12 @@ const Dashboard: React.FC = () => {
             </div>
           )}
 
+          {/* Active CSV upload component */}
           {showUpload && (
             <SmartCSVUpload onUploadComplete={handleUploadComplete} />
           )}
 
-          {/* Recent Upload Results */}
+          {/* Recent upload analysis results */}
           {recentUpload && recentUpload.budgetAnalysis && (
             <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/20">
               <div className="flex items-center justify-between mb-6">

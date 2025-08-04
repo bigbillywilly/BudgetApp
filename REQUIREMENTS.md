@@ -1,296 +1,193 @@
-# MoneyWise - Technical Requirements Document
+# MoneyWise - Requirements Document
 
-## Project Overview
+## 1. Purpose
 
-MoneyWise is a full-stack personal finance tracking application designed to help users manage their monthly budgets, analyze spending patterns, and receive AI-powered financial advice. The application demonstrates modern web development practices with a clean architecture suitable for enterprise-level applications.
+MoneyWise is a web-based personal finance application that helps users track income, expenses, and savings, analyze spending patterns, and receive actionable insights. The goal is to empower users to make informed financial decisions through intuitive tools and intelligent automation.
 
-## Business Requirements
+---
 
-### Primary Goals
-- **Budget Management**: Enable users to track monthly income, expenses, and savings goals
-- **Expense Analysis**: Provide insights into spending patterns through CSV import and categorization
-- **Financial Guidance**: Offer AI-powered advice and recommendations
-- **Historical Tracking**: Allow users to view and compare financial data across months
-- **User Experience**: Deliver an intuitive, responsive interface across all devices
+## 2. Scope
 
-### Target Users
-- Individuals seeking better financial management
-- Users comfortable with digital financial tools
-- People who want to analyze bank/credit card statements
-- Those looking for AI-assisted financial advice
+- Track and categorize financial transactions.
+- Set and monitor budgets and savings goals.
+- Import data from bank statements (CSV).
+- Provide analytics and visualizations.
+- Offer AI-powered financial advice and chat.
+- Ensure data privacy, security, and reliability.
 
-## System Architecture
+---
 
-### Architecture Pattern
-- **Frontend**: Component-based architecture with React and TypeScript
-- **Backend**: RESTful API with Express.js and Node.js
-- **Database**: PostgreSQL for relational data with Redis for caching
-- **Authentication**: JWT-based stateless authentication
-- **File Processing**: Server-side CSV parsing and analysis
+## 3. User Stories
 
-### Design Principles
-- **Separation of Concerns**: Clear boundaries between UI, business logic, and data layers
-- **Scalability**: Modular architecture supporting horizontal scaling
-- **Maintainability**: TypeScript throughout for type safety and better developer experience
-- **Security**: Secure handling of financial data with encryption and validation
-- **Performance**: Optimized loading times with caching strategies
+### 3.1 Registration & Authentication
+- As a user, I can register and log in securely.
+- As a user, I can reset my password if I forget it.
+- As a user, I can delete my account and all my data.
 
-## Technical Requirements
+### 3.2 Transaction Management
+- As a user, I can add, edit, and delete transactions.
+- As a user, I can import transactions from CSV files.
+- As a user, I can categorize transactions manually or automatically.
 
-### Frontend Requirements
+### 3.3 Budgeting & Goals
+- As a user, I can set monthly budgets and savings goals.
+- As a user, I can view my progress toward these goals.
 
-#### Core Technologies
-- **React 18+** with functional components and hooks
-- **TypeScript 4.9+** for type safety
-- **Tailwind CSS 3+** for styling and responsive design
-- **Vite** for fast development and building
-- **Papa Parse** for client-side CSV processing
+### 3.4 Analytics & Insights
+- As a user, I can view spending breakdowns by category and time period.
+- As a user, I can see trends and receive alerts about unusual spending.
+- As a user, I can access AI-generated financial advice and chat with an assistant.
 
-#### Browser Support
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-- Mobile browsers (iOS Safari, Chrome Mobile)
+### 3.5 Data & Security
+- As a user, I know my data is encrypted and protected.
+- As a user, I can export my data at any time.
 
-#### Performance Requirements
-- **First Contentful Paint**: < 1.5 seconds
-- **Time to Interactive**: < 3 seconds
-- **Bundle Size**: < 1MB compressed
-- **Accessibility**: WCAG 2.1 AA compliance
+---
 
-### Backend Requirements
+## 4. Functional Requirements
 
-#### Core Technologies
-- **Node.js 18+** with Express.js framework
-- **TypeScript 4.9+** for server-side development
-- **PostgreSQL 14+** as primary database
-- **Redis 7+** for caching and session management
-- **JWT** for authentication tokens
+### 4.1 User Management
+- Secure registration, login, and JWT-based authentication.
+- Email verification and password reset via email.
+- Profile management (view/update name, email).
+- Account deletion (removes all user data).
 
-#### API Specifications
-- **RESTful API** following OpenAPI 3.0 specification
-- **JSON** request/response format
-- **HTTP Status Codes** following semantic conventions
-- **Rate Limiting** to prevent abuse
-- **Request Validation** using middleware
+### 4.2 Transactions
+- CRUD operations for transactions.
+- CSV import with mapping and validation.
+- Automatic and manual categorization.
+- Support for recurring transactions.
 
-#### Security Requirements
-- **HTTPS** enforced in production
-- **CORS** properly configured
-- **Input Validation** and sanitization
-- **SQL Injection** protection through parameterized queries
-- **XSS Protection** with proper header configuration
-- **Password Hashing** using bcrypt
-- **JWT Secret** rotation capability
+### 4.3 Budgets & Goals
+- Set monthly income, fixed expenses, and savings goals.
+- Track actual vs. planned spending.
+- Visualize progress and remaining budget.
 
-### Database Requirements
+### 4.4 Analytics & Reporting
+- Spending by category, merchant, and time period.
+- Monthly and yearly trends.
+- Alerts for overspending or anomalies.
+- Export reports as CSV or PDF.
 
-#### PostgreSQL Schema
-```sql
--- Users table
-users (
-  id UUID PRIMARY KEY,
-  username VARCHAR(50) UNIQUE NOT NULL,
-  email VARCHAR(100) UNIQUE NOT NULL,
-  password_hash VARCHAR(255) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+### 4.5 AI & Automation
+- AI-powered chat for financial questions.
+- Automated categorization using AI and rules.
+- Personalized insights and recommendations.
 
--- Monthly financial data
-monthly_data (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  month_year VARCHAR(7) NOT NULL, -- Format: YYYY-MM
-  income DECIMAL(10,2) DEFAULT 0,
-  fixed_expenses DECIMAL(10,2) DEFAULT 0,
-  savings_goal DECIMAL(10,2) DEFAULT 0,
-  created_at TIMESTAMP DEFAULT NOW(),
-  updated_at TIMESTAMP DEFAULT NOW()
-);
+### 4.6 Security & Privacy
+- All sensitive data encrypted at rest and in transit.
+- Passwords hashed with bcrypt or Argon2.
+- Input validation and sanitization.
+- Rate limiting and brute-force protection.
+- GDPR-compliant data handling.
 
--- Transactions from CSV uploads
-transactions (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  monthly_data_id UUID REFERENCES monthly_data(id),
-  date DATE NOT NULL,
-  description TEXT NOT NULL,
-  amount DECIMAL(10,2) NOT NULL,
-  category VARCHAR(50) NOT NULL,
-  created_at TIMESTAMP DEFAULT NOW()
-);
+---
 
--- Chat messages with AI
-chat_messages (
-  id UUID PRIMARY KEY,
-  user_id UUID REFERENCES users(id),
-  monthly_data_id UUID REFERENCES monthly_data(id),
-  message_type VARCHAR(10) NOT NULL, -- 'user' or 'bot'
-  message_content TEXT NOT NULL,
-  timestamp TIMESTAMP DEFAULT NOW()
-);
+## 5. Non-Functional Requirements
+
+- **Performance**: API responses < 300ms for 95% of requests.
+- **Scalability**: Support for 10,000+ users.
+- **Reliability**: 99.9% uptime, automated backups.
+- **Accessibility**: WCAG 2.1 AA compliance.
+- **Responsiveness**: Mobile, tablet, and desktop support.
+- **Maintainability**: Modular codebase, automated tests, CI/CD.
+
+---
+
+## 6. Technical Requirements
+
+### 6.1 Frontend
+- React (TypeScript)
+- Tailwind CSS or Material UI
+- Charting library (e.g., Chart.js, Recharts)
+- CSV parsing (e.g., Papa Parse)
+- PWA support
+
+### 6.2 Backend
+- Node.js (TypeScript) with Express
+- PostgreSQL for persistent storage
+- Redis for caching and sessions
+- JWT for authentication
+- OpenAI API for AI features
+- Multer for file uploads
+- Joi for validation
+- Winston or similar for logging
+
+### 6.3 Infrastructure
+- Dockerized services
+- Environment-based configuration
+- CI/CD pipeline (GitHub Actions or similar)
+- Monitoring and alerting (e.g., Sentry, Prometheus)
+
+---
+
+## 7. API Requirements
+
+- RESTful endpoints with versioning (`/api/v1/`)
+- JSON request/response format
+- Standard HTTP status codes
+- Comprehensive error handling
+- Rate limiting on all endpoints
+- OpenAPI (Swagger) documentation
+
+---
+
+## 8. Data Model (Simplified)
+
+- **User**: id, email, name, password_hash, created_at, updated_at
+- **Transaction**: id, user_id, date, description, amount, category, type, created_at
+- **Budget**: id, user_id, month, year, income, fixed_expenses, savings_goal, created_at
+- **ChatMessage**: id, user_id, message, response, tokens_used, created_at
+
+---
+
+## 9. Environment Variables
+
+- `PORT`
+- `DATABASE_URL` or (`DB_HOST`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`)
+- `JWT_ACCESS_SECRET`, `JWT_REFRESH_SECRET`
+- `OPENAI_API_KEY`
+- `ENCRYPTION_KEY`
+- `FRONTEND_URL`
+
+---
+
+## 10. Installation & Setup
+
+```bash
+# Install dependencies
+npm install
+
+# Set up environment variables in .env
+
+# Run database migrations
+npm run migrate
+
+# Start development server
+npm run dev
 ```
 
-#### Data Relationships
-- One-to-Many: User → Monthly Data
-- One-to-Many: Monthly Data → Transactions
-- One-to-Many: User → Chat Messages
-- Indexes on user_id, month_year, and date fields for performance
+---
 
-## Functional Requirements
+## 11. Testing
 
-### User Management
-- **FR-001**: User registration with email and username
-- **FR-002**: Secure user authentication and authorization
-- **FR-003**: Password reset functionality
-- **FR-004**: User profile management
+- Unit tests for all business logic (Jest)
+- Integration tests for API endpoints
+- Test coverage > 80%
+- Linting and formatting enforced
 
-### Financial Data Management
-- **FR-005**: Create and update monthly financial data (income, expenses, savings)
-- **FR-006**: View historical financial data by month
-- **FR-007**: Calculate available spending money automatically
-- **FR-008**: Data persistence across browser sessions
+---
 
-### CSV Processing
-- **FR-009**: Upload and parse CSV files from banks/credit cards
-- **FR-010**: Automatic transaction categorization based on descriptions
-- **FR-011**: Manual category correction and customization
-- **FR-012**: Display spending breakdown by category
-- **FR-013**: Support for multiple CSV formats (Chase, Bank of America, etc.)
+## 12. Deployment
 
-### AI Financial Advisor
-- **FR-014**: Interactive chat interface with AI assistant
-- **FR-015**: Contextual financial advice based on user data
-- **FR-016**: Pre-built quick questions for common scenarios
-- **FR-017**: Chat history preservation and retrieval
+- Docker Compose for local and production deployments
+- Automated CI/CD for build, test, and deploy
+- Health checks and monitoring enabled
 
-### Analytics and Insights
-- **FR-018**: Monthly spending comparisons
-- **FR-019**: Category-wise spending trends
-- **FR-020**: Budget vs. actual spending analysis
-- **FR-021**: Savings progress tracking
+---
 
-## Non-Functional Requirements
+## 13. Support & Maintenance
 
-### Performance
-- **NFR-001**: API response time < 200ms for most endpoints
-- **NFR-002**: Database queries < 100ms average response time
-- **NFR-003**: Support for 1000+ concurrent users
-- **NFR-004**: Client-side CSV processing for files up to 10MB
-
-### Scalability
-- **NFR-005**: Horizontal scaling capability for web servers
-- **NFR-006**: Database connection pooling for efficient resource usage
-- **NFR-007**: Redis caching for frequently accessed data
-- **NFR-008**: CDN integration for static assets
-
-### Reliability
-- **NFR-009**: 99.9% uptime availability
-- **NFR-010**: Graceful error handling and user feedback
-- **NFR-011**: Automatic backup of user data
-- **NFR-012**: Transaction rollback capability for data integrity
-
-### Security
-- **NFR-013**: End-to-end encryption for sensitive data
-- **NFR-014**: Regular security audits and vulnerability assessments
-- **NFR-015**: GDPR compliance for user data handling
-- **NFR-016**: Secure file upload with virus scanning
-
-### Usability
-- **NFR-017**: Mobile-responsive design for all screen sizes
-- **NFR-018**: Intuitive navigation with < 3 clicks to any feature
-- **NFR-019**: Accessibility compliance (WCAG 2.1 AA)
-- **NFR-020**: Progressive web app capabilities
-
-## Development Requirements
-
-### Development Environment
-- **Node.js 18+** and npm/yarn package manager
-- **PostgreSQL 14+** local installation or Docker container
-- **Redis 7+** for development caching
-- **Git** for version control
-- **VS Code** or similar IDE with TypeScript support
-
-### Code Quality
-- **ESLint** and **Prettier** for code formatting
-- **Husky** for pre-commit hooks
-- **Jest** and **React Testing Library** for testing
-- **TypeScript strict mode** enabled
-- **Code coverage** minimum 80% for critical paths
-
-### Deployment
-- **Docker** containerization for production deployment
-- **CI/CD pipeline** with GitHub Actions or similar
-- **Environment-based configuration** (dev, staging, production)
-- **Health checks** and monitoring endpoints
-- **Log aggregation** and error tracking
-
-## Dependencies
-
-### Frontend Dependencies
-```json
-{
-  "react": "^18.2.0",
-  "typescript": "^4.9.5",
-  "tailwindcss": "^3.3.0",
-  "lucide-react": "^0.263.1",
-  "papaparse": "^5.4.1"
-}
-```
-
-### Backend Dependencies
-```json
-{
-  "express": "^4.18.2",
-  "typescript": "^4.9.5",
-  "pg": "^8.8.0",
-  "redis": "^4.5.1",
-  "jsonwebtoken": "^9.0.0",
-  "bcryptjs": "^2.4.3",
-  "multer": "^1.4.5",
-  "helmet": "^6.0.1",
-  "cors": "^2.8.5"
-}
-```
-
-## Success Metrics
-
-### Technical Metrics
-- **Code Quality**: TypeScript coverage > 95%
-- **Performance**: Core Web Vitals in "Good" range
-- **Testing**: Unit test coverage > 80%
-- **Security**: Zero high-severity vulnerabilities
-
-### User Experience Metrics
-- **Usability**: Task completion rate > 90%
-- **Performance**: Page load time < 3 seconds
-- **Accessibility**: WCAG 2.1 AA compliance score
-- **Mobile Experience**: Responsive design on all devices
-
-### Business Metrics
-- **Data Accuracy**: CSV parsing accuracy > 95%
-- **User Engagement**: Average session duration > 5 minutes
-- **Feature Adoption**: Core features used by > 80% of users
-- **Error Rate**: Application errors < 1% of requests
-
-npm install --save-dev @types/express-rate-limit
-npm install express-rate-limit
-npm install joi @types/joi
-npm install winston
-npm install --save-dev @types/winston
-npm install bcrypt
-npm install --save-dev @types/bcrypt
-npm install uuid
-npm install --save-dev @types/uuid
-npm install compression
-npm install --save-dev @types/compression
-npm i --save-dev @types/compression
-npm uninstall @types/express @types/express-serve-static-core
-npm install --save-dev @types/express@latest @types/express-serve-static-core@latest
-npm i -g vercel
-
-"C:\Program Files\PostgreSQL\15\bin\psql.exe" -h localhost -p 54321 -U postgres
-
-
+- Issue tracking via GitHub
+- Documentation for all major modules and APIs
+- Regular dependency updates and security patches

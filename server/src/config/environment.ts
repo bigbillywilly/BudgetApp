@@ -1,6 +1,7 @@
 // server/src/config/environment.ts
 import { logInfo, logError, logWarn } from '../utils/logger';
 
+// Application configuration interface with all environment settings
 export interface EnvironmentConfig {
   // App Configuration
   nodeEnv: string;
@@ -69,6 +70,7 @@ export interface EnvironmentConfig {
   };
 }
 
+// Environment configuration manager with validation and type safety
 class EnvironmentConfiguration {
   private config: EnvironmentConfig;
 
@@ -77,6 +79,7 @@ class EnvironmentConfiguration {
     this.validateConfiguration();
   }
 
+  // Load configuration from environment variables with defaults
   private loadConfiguration(): EnvironmentConfig {
     return {
       // App Configuration
@@ -147,12 +150,13 @@ class EnvironmentConfiguration {
     };
   }
 
+  // Parse CORS origins from environment with production/development defaults
   private parseCorsOrigins(): string[] {
     const frontendUrl = process.env.FRONTEND_URL;
     
     if (this.config?.nodeEnv === 'production') {
       const defaultProductionOrigins = [
-        'https://budget-app-orpin-nu.vercel.app', // Your main production URL
+        'https://budget-app-orpin-nu.vercel.app',
       ];
       
       if (frontendUrl) {
@@ -172,10 +176,11 @@ class EnvironmentConfiguration {
     return defaultOrigins;
   }
 
+  // Validate required environment variables based on deployment method
   private validateConfiguration(): void {
     const errors: string[] = [];
 
-    // Core application variables (always required)
+    // Core application variables
     if (!this.config.port || this.config.port <= 0) {
       errors.push('Invalid or missing PORT');
     }
@@ -192,9 +197,8 @@ class EnvironmentConfiguration {
       errors.push('Missing required environment variable: ENCRYPTION_KEY');
     }
 
-    // Database validation - ONLY check individual variables if DATABASE_URL is NOT present
+    // Database validation - skip individual vars if DATABASE_URL exists
     if (!process.env.DATABASE_URL) {
-      // Only validate individual DB variables if DATABASE_URL doesn't exist
       if (!this.config.database.host) {
         errors.push('Missing required environment variable: DB_HOST');
       }
@@ -211,7 +215,7 @@ class EnvironmentConfiguration {
         errors.push('Missing required environment variable: DB_PASSWORD');
       }
     } else {
-      console.log('✅ Using DATABASE_URL - skipping individual DB variable validation');
+      console.log('Using DATABASE_URL - skipping individual DB variable validation');
     }
 
     // CORS validation
@@ -254,7 +258,7 @@ class EnvironmentConfiguration {
     return this.config.nodeEnv === 'test';
   }
 
-  // Get sensitive information summary (for logging)
+  // Get security configuration summary for logging
   public getSecuritySummary(): {
     hasCustomJwtSecrets: boolean;
     hasCustomEncryptionKey: boolean;
@@ -274,10 +278,10 @@ class EnvironmentConfiguration {
   }
 }
 
-// Export singleton instance
+// Singleton instance for application-wide use
 export const environmentConfig = new EnvironmentConfiguration();
 
-// Export convenience functions
+// Convenience exports for common operations
 export const getConfig = () => environmentConfig.getConfig();
 export const isDevelopment = () => environmentConfig.isDevelopment();
 export const isProduction = () => environmentConfig.isProduction();

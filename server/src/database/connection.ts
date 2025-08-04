@@ -3,16 +3,17 @@ import { Pool } from 'pg';
 import { databaseConfig } from '../config/database';
 import { logInfo, logError } from '../utils/logger';
 
+// Singleton database connection wrapper with delegation to configuration layer
 class DatabaseConnection {
   private pool: Pool;
   private static instance: DatabaseConnection;
 
   private constructor() {
-    // Let database.ts handle all the configuration and pool creation
+    // Delegate pool creation to configuration layer for consistency
     this.pool = databaseConfig.createPool();
   }
 
-  // Singleton pattern
+  // Singleton pattern for application-wide database access
   public static getInstance(): DatabaseConnection {
     if (!DatabaseConnection.instance) {
       DatabaseConnection.instance = new DatabaseConnection();
@@ -20,32 +21,28 @@ class DatabaseConnection {
     return DatabaseConnection.instance;
   }
 
-  // Get pool instance
   public getPool(): Pool {
     return this.pool;
   }
 
-  // Test database connection - delegates to databaseConfig for consistency
+  // Delegate connection testing to configuration layer
   public async testConnection(): Promise<boolean> {
     return await databaseConfig.testConnection(this.pool);
   }
 
-  // Get database information - delegates to databaseConfig
   public async getDatabaseInfo() {
     return await databaseConfig.getDatabaseInfo(this.pool);
   }
 
-  // Get pool statistics - delegates to databaseConfig
   public getPoolStats() {
     return databaseConfig.getPoolStats();
   }
 
-  // Health check - delegates to databaseConfig
   public async healthCheck() {
     return await databaseConfig.healthCheck();
   }
 
-  // Close all connections - delegates to databaseConfig
+  // Close connection pool with proper cleanup
   public async closeConnection(): Promise<void> {
     try {
       await databaseConfig.closePool();
@@ -56,7 +53,7 @@ class DatabaseConnection {
     }
   }
 
-  // Execute query with retry logic - delegates to databaseConfig
+  // Execute queries with automatic retry logic for transient failures
   public async executeWithRetry<T extends any[] = any[]>(
     query: string, 
     params?: any[], 
@@ -66,7 +63,6 @@ class DatabaseConnection {
     return await databaseConfig.executeWithRetry<T>(query, params, maxRetries, retryDelay);
   }
 
-  // Additional helper method to get the current configuration
   public getConfig() {
     return databaseConfig.getConfig();
   }

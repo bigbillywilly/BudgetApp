@@ -1,7 +1,11 @@
-﻿// client/src/types/financial.types.ts
+﻿/**
+ * Financial data types for budget tracking application
+ */
+
+// Monthly budget configuration and spending targets
 export interface MonthlyData {
   id: string;
-  month: number;
+  month: number; // 1-12
   year: number;
   income: number;
   fixed_expenses: number;
@@ -10,6 +14,7 @@ export interface MonthlyData {
   updated_at: string;
 }
 
+// Individual financial transaction record
 export interface Transaction {
   id: string;
   transaction_date: string;
@@ -17,12 +22,13 @@ export interface Transaction {
   card_no?: string;
   description: string;
   category: string;
-  amount: number;
+  amount: number; // Positive: income, negative: expense
   type: 'income' | 'expense';
   created_at: string;
   updated_at: string;
 }
 
+// Transaction category for spending classification
 export interface TransactionCategory {
   id: string;
   name: string;

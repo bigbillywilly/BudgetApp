@@ -2,6 +2,7 @@
 import { createClient, RedisClientType } from 'redis';
 import { logInfo, logError, logWarn } from '../utils/logger';
 
+// Redis configuration interface for connection parameters
 export interface RedisConfig {
   url: string;
   host: string;
@@ -12,6 +13,7 @@ export interface RedisConfig {
   retryDelay: number;
 }
 
+// Redis configuration manager with optional caching support
 class RedisConfiguration {
   private config: RedisConfig;
   private client: RedisClientType | null = null;
@@ -26,6 +28,7 @@ class RedisConfiguration {
     }
   }
 
+  // Parse Redis configuration from environment variables
   private loadConfiguration(): RedisConfig {
     const redisUrl = process.env.REDIS_URL || 'redis://localhost:6379';
     const url = new URL(redisUrl);
@@ -45,6 +48,7 @@ class RedisConfiguration {
     return { ...this.config };
   }
 
+  // Create Redis client with automatic reconnection
   public async createClient(): Promise<RedisClientType | null> {
     if (!this.isEnabled) {
       logWarn('Redis is disabled - skipping client creation');
@@ -69,6 +73,7 @@ class RedisConfiguration {
         }
       });
 
+      // Event handlers for connection monitoring
       this.client.on('error', (err) => {
         logError('Redis Client Error', err);
       });
@@ -97,6 +102,7 @@ class RedisConfiguration {
     }
   }
 
+  // Test Redis connectivity with ping command
   public async testConnection(): Promise<boolean> {
     if (!this.isEnabled || !this.client) {
       return false;
@@ -112,6 +118,7 @@ class RedisConfiguration {
     }
   }
 
+  // Gracefully close Redis connection
   public async closeConnection(): Promise<void> {
     if (this.client) {
       try {
@@ -132,6 +139,7 @@ class RedisConfiguration {
     return this.isEnabled;
   }
 
+  // Health check for monitoring systems
   public async healthCheck(): Promise<{
     status: 'healthy' | 'unhealthy';
     responseTime: number;
@@ -164,10 +172,10 @@ class RedisConfiguration {
   }
 }
 
-// Export singleton instance
+// Singleton instance for application-wide use
 export const redisConfig = new RedisConfiguration();
 
-// Export convenience functions
+// Convenience exports for common operations
 export const getRedisConfig = () => redisConfig.getConfig();
 export const createRedisClient = () => redisConfig.createClient();
 export const testRedisConnection = () => redisConfig.testConnection();

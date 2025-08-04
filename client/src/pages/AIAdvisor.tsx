@@ -1,7 +1,9 @@
-// client/src/pages/AIAdvisor.tsx
+// AI Financial Advisor page providing personalized financial guidance
+// Integrates chat interface with quick questions and AI-generated insights
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageSquare, Send, Bot, User, Sparkles, Clock, AlertCircle, Lightbulb } from 'lucide-react';
 
+// Chat message structure for conversation history
 interface ChatMessage {
   id: string;
   message: string;
@@ -10,6 +12,7 @@ interface ChatMessage {
   tokensUsed?: number;
 }
 
+// Quick question template for common financial topics
 interface QuickQuestion {
   id: string;
   label: string;
@@ -25,6 +28,7 @@ const AIAdvisor: React.FC = () => {
   const [loadingInsights, setLoadingInsights] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Pre-defined financial topics for quick access
   const quickQuestions: QuickQuestion[] = [
     {
       id: 'emergency_fund',
@@ -58,21 +62,23 @@ const AIAdvisor: React.FC = () => {
     }
   ];
 
-  // Scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
 
-  // Load chat history and insights on component mount
+  // Initialize component with chat history and insights
   useEffect(() => {
     loadChatHistory();
     loadInsights();
   }, []);
 
+  // Smooth scroll to latest message
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  // Load previous conversation history from API
   const loadChatHistory = async () => {
     try {
       const token = localStorage.getItem('token');
@@ -89,6 +95,7 @@ const AIAdvisor: React.FC = () => {
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data.history) {
+          // Transform API response to message format
           const formattedMessages: ChatMessage[] = data.data.history.map((msg: any, index: number) => ({
             id: `history-${index}`,
             message: msg.message,
@@ -104,6 +111,7 @@ const AIAdvisor: React.FC = () => {
     }
   };
 
+  // Fetch AI-generated financial insights based on user data
   const loadInsights = async () => {
     setLoadingInsights(true);
     try {
@@ -131,9 +139,11 @@ const AIAdvisor: React.FC = () => {
     }
   };
 
+  // Send user message to AI and handle response
   const sendMessage = async (message: string) => {
     if (!message.trim() || isLoading) return;
 
+    // Add user message to conversation
     const userMessage: ChatMessage = {
       id: `user-${Date.now()}`,
       message: message.trim(),
@@ -147,16 +157,16 @@ const AIAdvisor: React.FC = () => {
 
     try {
       const token = localStorage.getItem('token');
-      console.log('🔑 Token check:', token ? 'Token exists' : 'No token found');
-      console.log('🔑 Token length:', token?.length);
+      console.log('Token check:', token ? 'Token exists' : 'No token found');
+      console.log('Token length:', token?.length);
       
       if (!token) {
         throw new Error('Authentication required - no token found');
       }
 
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:5000';
-      console.log('🌐 API URL:', apiUrl);
-      console.log('📤 Sending message:', message.trim());
+      console.log('API URL:', apiUrl);
+      console.log('Sending message:', message.trim());
 
       const response = await fetch(`${apiUrl}/api/chat/message`, {
         method: 'POST',
@@ -167,17 +177,18 @@ const AIAdvisor: React.FC = () => {
         body: JSON.stringify({ message: message.trim() }),
       });
 
-      console.log('📥 Response status:', response.status);
-      console.log('📥 Response ok:', response.ok);
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
 
       if (!response.ok) {
         const errorData = await response.json();
-        console.error('❌ Error response:', errorData);
+        console.error('Error response:', errorData);
         throw new Error(errorData.message || `HTTP Error: ${response.status}`);
       }
 
       const data = await response.json();
       if (data.success) {
+        // Add AI response to conversation
         const aiMessage: ChatMessage = {
           id: `ai-${Date.now()}`,
           message: data.data.message,
@@ -192,6 +203,7 @@ const AIAdvisor: React.FC = () => {
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      // Display error message in chat
       const errorMessage: ChatMessage = {
         id: `error-${Date.now()}`,
         message: `Sorry, I'm having trouble right now. ${error instanceof Error ? error.message : 'Please try again later.'}`,
@@ -204,6 +216,7 @@ const AIAdvisor: React.FC = () => {
     }
   };
 
+  // Handle pre-defined quick questions
   const handleQuickQuestion = async (questionId: string) => {
     setIsLoading(true);
     try {
@@ -229,6 +242,7 @@ const AIAdvisor: React.FC = () => {
 
       const data = await response.json();
       if (data.success) {
+        // Add both question and answer to conversation
         const userMessage: ChatMessage = {
           id: `quick-user-${Date.now()}`,
           message: data.data.question,
@@ -260,18 +274,20 @@ const AIAdvisor: React.FC = () => {
     }
   };
 
+  // Handle form submission for message input
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     sendMessage(inputMessage);
   };
 
+  // Format timestamp for message display
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
     <div className="max-w-6xl mx-auto">
-      {/* Header */}
+      {/* Page header with branding */}
       <div className="text-center mb-8">
         <div className="w-20 h-20 bg-gradient-to-br from-purple-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
           <MessageSquare className="w-10 h-10 text-white" />
@@ -283,8 +299,9 @@ const AIAdvisor: React.FC = () => {
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-        {/* Quick Questions Sidebar */}
+        {/* Sidebar with quick questions and insights */}
         <div className="lg:col-span-1">
+          {/* Quick question buttons for common financial topics */}
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20 mb-6">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
               <Sparkles className="w-5 h-5 mr-2 text-purple-500" />
@@ -313,7 +330,7 @@ const AIAdvisor: React.FC = () => {
             </div>
           </div>
 
-          {/* AI Insights */}
+          {/* AI-generated insights based on user's financial data */}
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-6 border border-white/20">
             <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
               <Lightbulb className="w-5 h-5 mr-2 text-yellow-500" />
@@ -346,10 +363,10 @@ const AIAdvisor: React.FC = () => {
           </div>
         </div>
 
-        {/* Chat Interface */}
+        {/* Main chat interface */}
         <div className="lg:col-span-3">
           <div className="bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl border border-white/20 flex flex-col h-[600px]">
-            {/* Chat Header */}
+            {/* Chat header with AI assistant branding */}
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
@@ -362,21 +379,24 @@ const AIAdvisor: React.FC = () => {
               </div>
             </div>
 
-            {/* Messages Area */}
+            {/* Scrollable message history area */}
             <div className="flex-1 overflow-y-auto p-6 space-y-4">
               {messages.length === 0 ? (
+                /* Empty state with welcome message */
                 <div className="text-center py-12">
                   <Bot className="w-16 h-16 text-gray-300 mx-auto mb-4" />
                   <h3 className="text-lg font-semibold text-gray-600 mb-2">Welcome to your AI Financial Advisor!</h3>
                   <p className="text-gray-500">Ask me anything about budgeting, saving, or managing your finances.</p>
                 </div>
               ) : (
+                /* Display conversation history */
                 messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex ${message.type === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div className={`flex items-start gap-3 max-w-[80%] ${message.type === 'user' ? 'flex-row-reverse' : ''}`}>
+                      {/* Message avatar */}
                       <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
                         message.type === 'user' 
                           ? 'bg-gradient-to-br from-blue-500 to-purple-600' 
@@ -388,6 +408,7 @@ const AIAdvisor: React.FC = () => {
                           <Bot className="w-5 h-5 text-white" />
                         )}
                       </div>
+                      {/* Message bubble with content and metadata */}
                       <div className={`p-4 rounded-2xl ${
                         message.type === 'user'
                           ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white'
@@ -409,6 +430,7 @@ const AIAdvisor: React.FC = () => {
                   </div>
                 ))
               )}
+              {/* Loading indicator while AI is responding */}
               {isLoading && (
                 <div className="flex justify-start">
                   <div className="flex items-start gap-3 max-w-[80%]">
@@ -428,7 +450,7 @@ const AIAdvisor: React.FC = () => {
               <div ref={messagesEndRef} />
             </div>
 
-            {/* Input Area */}
+            {/* Message input area with send button */}
             <div className="p-6 border-t border-gray-200">
               <form onSubmit={handleSubmit} className="flex gap-3">
                 <input

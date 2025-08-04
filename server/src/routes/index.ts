@@ -9,9 +9,9 @@ import { financialRoutes } from './financial.routes';
 
 const router = Router();
 
-console.log('📋 Loading routes with REAL database integration...');
+console.log('Loading routes with real database integration...');
 
-// Health check
+// Health check endpoint for uptime and diagnostics
 router.get('/health', (req, res) => {
   res.json({
     success: true,
@@ -23,7 +23,7 @@ router.get('/health', (req, res) => {
   });
 });
 
-// Mount route modules with REAL controllers
+// Mount route modules for all major API domains
 router.use('/auth', authRoutes);
 router.use('/users', userRoutes);
 router.use('/transactions', transactionRoutes);
@@ -31,7 +31,7 @@ router.use('/chat', chatRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/financial', financialRoutes);
 
-// API documentation endpoint
+// API documentation endpoint with endpoint map and rate limits
 router.get('/docs', (req, res) => {
   res.json({
     success: true,
@@ -86,7 +86,7 @@ router.get('/docs', (req, res) => {
   });
 });
 
-// 404 handler for API routes
+// Catch-all 404 handler for undefined API routes
 router.use('*', (req, res) => {
   res.status(404).json({
     success: false,

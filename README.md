@@ -87,13 +87,12 @@ Navigate to `http://localhost:5173`
 ## Project Structure
 
 ```
-moneywise/
+BudgetApp/
 ├── client/                          # React Frontend Application
 │   ├── src/
 │   │   ├── components/              # Reusable UI Components
 │   │   │   ├── common/              # Shared components
 │   │   │   ├── dashboard/           # Dashboard-specific components
-│   │   │   ├── history/             # Historical data components
 │   │   │   └── chat/                # AI chat components
 │   │   ├── services/                # API and data services
 │   │   ├── hooks/                   # Custom React hooks

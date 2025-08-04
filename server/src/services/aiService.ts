@@ -19,6 +19,7 @@ interface AIResponse {
   context?: any;
 }
 
+// AI service for generating financial advice and insights using OpenAI
 class AIService {
   private openai: OpenAI | null;
   private pool: Pool;
@@ -26,7 +27,6 @@ class AIService {
 
   constructor() {
     this.isEnabled = !!process.env.OPENAI_API_KEY;
-    
     if (this.isEnabled) {
       this.openai = new OpenAI({
         apiKey: process.env.OPENAI_API_KEY,
@@ -35,19 +35,16 @@ class AIService {
       this.openai = null;
       logWarn('OpenAI API key not provided - AI features will be disabled');
     }
-    
     this.pool = db.getPool();
   }
 
-  // Get user context for AI responses
+  // Aggregate user context for AI prompt generation
   private async getUserContext(userId: string): Promise<ChatContext> {
     try {
       const context: ChatContext = {};
-
-      // Get user summary
       context.userSummary = await userService.getUserSummary(userId);
 
-      // Get recent transactions (last 10)
+      // Fetch last 10 transactions
       const transactionsResult = await this.pool.query(`
         SELECT transaction_date, description, category, amount, type
         FROM transactions 
@@ -57,19 +54,18 @@ class AIService {
       `, [userId]);
       context.recentTransactions = transactionsResult.rows;
 
-      // Get current month data
+      // Fetch current month budget data
       const currentDate = new Date();
       const monthlyResult = await this.pool.query(`
         SELECT income, fixed_expenses, savings_goal
         FROM monthly_data 
         WHERE user_id = $1 AND month = $2 AND year = $3
       `, [userId, currentDate.getMonth() + 1, currentDate.getFullYear()]);
-      
       if (monthlyResult.rows.length > 0) {
         context.monthlyData = monthlyResult.rows[0];
       }
 
-      // Get financial insights
+      // Fetch financial insights
       context.insights = await analyticsService.getFinancialInsights(userId);
 
       return context;
@@ -79,12 +75,11 @@ class AIService {
     }
   }
 
-  // Generate system prompt with user context
+  // Generate system prompt for OpenAI using user context
   private generateSystemPrompt(context: ChatContext): string {
     const { userSummary, monthlyData, insights } = context;
-    
     let prompt = `You are a helpful financial advisor AI assistant for MoneyWise, a personal finance tracking app. 
-    
+
 Your role is to provide personalized financial advice, budgeting tips, and insights based on the user's financial data.
 
 Key guidelines:
@@ -129,10 +124,9 @@ Current Alerts: ${insights.alerts.join(', ')}
     return prompt;
   }
 
-  // Send message to AI and get response
+  // Generate AI response for user message
   async generateResponse(userId: string, userMessage: string): Promise<AIResponse> {
     try {
-      // Check if OpenAI is enabled
       if (!this.isEnabled || !this.openai) {
         return {
           message: "I'm sorry, but AI features are currently unavailable. The OpenAI API key is not configured. You can still track your finances manually using the dashboard!",
@@ -140,13 +134,9 @@ Current Alerts: ${insights.alerts.join(', ')}
         };
       }
 
-      // Get user context
       const context = await this.getUserContext(userId);
-      
-      // Generate system prompt
       const systemPrompt = this.generateSystemPrompt(context);
 
-      // Call OpenAI API
       const completion = await this.openai.chat.completions.create({
         model: "gpt-3.5-turbo",
         messages: [
@@ -177,8 +167,6 @@ Current Alerts: ${insights.alerts.join(', ')}
       };
     } catch (error) {
       logError('AI service error', error);
-      
-      // Fallback response
       return {
         message: "I'm experiencing some technical difficulties right now. Please try again later, or feel free to explore your financial dashboard in the meantime!",
         tokensUsed: 0
@@ -186,7 +174,7 @@ Current Alerts: ${insights.alerts.join(', ')}
     }
   }
 
-  // Save chat message to database
+  // Persist chat messages and AI responses for analytics and history
   async saveChatMessage(
     userId: string, 
     userMessage: string, 
@@ -194,33 +182,26 @@ Current Alerts: ${insights.alerts.join(', ')}
     tokensUsed: number
   ): Promise<void> {
     const client = await this.pool.connect();
-    
     try {
       await client.query('BEGIN');
-
-      // Save user message
       await client.query(`
         INSERT INTO chat_messages (user_id, message, response, message_type, tokens_used)
         VALUES ($1, $2, $3, $4, $5)
       `, [userId, userMessage, '', 'user', 0]);
-
-      // Save AI response
       await client.query(`
         INSERT INTO chat_messages (user_id, message, response, message_type, tokens_used)
         VALUES ($1, $2, $3, $4, $5)
       `, [userId, '', aiResponse, 'assistant', tokensUsed]);
-
       await client.query('COMMIT');
     } catch (error) {
       await client.query('ROLLBACK');
       logError('Failed to save chat message', error);
-      // Don't throw error to avoid disrupting the user experience
     } finally {
       client.release();
     }
   }
 
-  // Get chat history
+  // Retrieve chat history for user
   async getChatHistory(userId: string, limit: number = 20): Promise<any[]> {
     try {
       const result = await this.pool.query(`
@@ -242,27 +223,21 @@ Current Alerts: ${insights.alerts.join(', ')}
     }
   }
 
-  // Generate financial insights using AI
+  // Generate financial insights using AI or fallback logic
   async generateInsights(userId: string): Promise<string[]> {
     try {
-      // Check if OpenAI is enabled
       if (!this.isEnabled || !this.openai) {
         const context = await this.getUserContext(userId);
-        
         if (!context.userSummary) {
           return ["Start tracking your income and expenses to get personalized insights!"];
         }
-
-        // Return basic insights without AI
         const basicInsights = [];
         const { totalIncome, totalExpenses, netWorth } = context.userSummary.stats;
-        
         if (netWorth > 0) {
           basicInsights.push("Great job! You're spending less than you earn.");
         } else {
           basicInsights.push("Consider reviewing your expenses to improve your financial health.");
         }
-        
         if (totalIncome > 0) {
           const expenseRatio = (totalExpenses / totalIncome) * 100;
           if (expenseRatio > 80) {
@@ -271,14 +246,11 @@ Current Alerts: ${insights.alerts.join(', ')}
             basicInsights.push("You're doing well at keeping expenses low relative to income!");
           }
         }
-        
         basicInsights.push("Upload your bank statements to get more detailed spending insights.");
-        
         return basicInsights;
       }
 
       const context = await this.getUserContext(userId);
-      
       if (!context.userSummary) {
         return ["Start tracking your income and expenses to get personalized insights!"];
       }
@@ -306,11 +278,9 @@ Format as an array of strings, each insight being one practical tip or observati
       });
 
       const response = completion.choices[0].message.content;
-      
       try {
         return JSON.parse(response || '[]');
       } catch {
-        // Fallback if JSON parsing fails
         return [response || "Keep tracking your expenses for better insights!"];
       }
     } catch (error) {

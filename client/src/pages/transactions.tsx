@@ -1,10 +1,12 @@
+// Monthly transactions page for viewing and managing financial transactions by month
+// Provides transaction filtering, budget progress tracking, and manual transaction entry
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, DollarSign, X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useBudget } from '../context/budgetContext';
 import { apiService, Transaction } from '../services/api';
 
-// Import unified categories from SmartCSVUpload
+// Unified spending categories matching CSV upload categorization system
 const SPENDING_CATEGORIES = {
   'Essential Spending': [
     'Grocery',
@@ -42,15 +44,17 @@ const SPENDING_CATEGORIES = {
   ]
 };
 
-// All categories as a flat array
+// Flattened array of all available categories for form dropdowns
 const ALL_CATEGORIES = Object.values(SPENDING_CATEGORIES).flat();
 
+// Filter interface for transaction search and categorization
 interface TransactionFilters {
   category?: string;
   type?: string;
   search?: string;
 }
 
+// Month/year selection structure for transaction viewing
 interface MonthYear {
   month: number;
   year: number;
@@ -58,7 +62,7 @@ interface MonthYear {
   key: string;
 }
 
-// Month selector component
+// Month selector component with navigation arrows and dropdown
 const MonthSelector: React.FC<{
   selectedMonth: MonthYear;
   onMonthChange: (month: MonthYear) => void;
@@ -69,21 +73,21 @@ const MonthSelector: React.FC<{
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
-  // Calculate dropdown position and update on scroll
+  // Calculate dropdown position for portal rendering to avoid z-index issues
   useEffect(() => {
     const updatePosition = () => {
       if (isOpen && buttonRef.current) {
         const rect = buttonRef.current.getBoundingClientRect();
         setDropdownPosition({
-          top: rect.bottom + 8, // Remove window.scrollY since we're using fixed positioning
-          left: rect.left - 30 // Remove window.scrollX since we're using fixed positioning
+          top: rect.bottom + 8,
+          left: rect.left - 30
         });
       }
     };
 
     if (isOpen) {
       updatePosition();
-      // Update position on scroll
+      // Update position on scroll and resize to maintain alignment
       window.addEventListener('scroll', updatePosition);
       window.addEventListener('resize', updatePosition);
     }
@@ -94,7 +98,7 @@ const MonthSelector: React.FC<{
     };
   }, [isOpen]);
 
-  // Close dropdown when clicking outside
+  // Close dropdown when clicking outside the component
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node) &&
@@ -112,15 +116,17 @@ const MonthSelector: React.FC<{
     };
   }, [isOpen]);
 
+  // Navigate between available months with boundary checking
   const navigateMonth = (direction: 'prev' | 'next') => {
     const currentIndex = availableMonths.findIndex(m => m.key === selectedMonth.key);
     if (direction === 'prev' && currentIndex < availableMonths.length - 1) {
-      onMonthChange(availableMonths[currentIndex + 1]); // Go to older month (back in time)
+      onMonthChange(availableMonths[currentIndex + 1]); // Go to older month
     } else if (direction === 'next' && currentIndex > 0) {
-      onMonthChange(availableMonths[currentIndex - 1]); // Go to newer month (forward in time)
+      onMonthChange(availableMonths[currentIndex - 1]); // Go to newer month
     }
   };
 
+  // Determine navigation button availability based on current position
   const canNavigatePrev = availableMonths.findIndex(m => m.key === selectedMonth.key) < availableMonths.length - 1;
   const canNavigateNext = availableMonths.findIndex(m => m.key === selectedMonth.key) > 0;
 
@@ -136,7 +142,7 @@ const MonthSelector: React.FC<{
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Left Arrow - Go back in time (older month) */}
+          {/* Navigation to previous month (older) */}
           <button
             onClick={() => navigateMonth('prev')}
             disabled={!canNavigatePrev}
@@ -146,7 +152,7 @@ const MonthSelector: React.FC<{
             <ChevronLeft className="w-4 h-4" />
           </button>
 
-          {/* Month Dropdown - UPDATED: using portal for true top-level rendering */}
+          {/* Month dropdown with portal rendering for proper z-index layering */}
           <div className="relative">
             <button
               ref={buttonRef}
@@ -156,7 +162,7 @@ const MonthSelector: React.FC<{
               {selectedMonth.label}
             </button>
 
-            {/* Render dropdown in portal to escape all stacking contexts */}
+            {/* Portal-rendered dropdown to escape stacking context limitations */}
             {isOpen && createPortal(
               <div 
                 ref={dropdownRef}
@@ -186,7 +192,7 @@ const MonthSelector: React.FC<{
             )}
           </div>
 
-          {/* Right Arrow - Go forward in time (newer month) */}
+          {/* Navigation to next month (newer) */}
           <button
             onClick={() => navigateMonth('next')}
             disabled={!canNavigateNext}
@@ -198,7 +204,7 @@ const MonthSelector: React.FC<{
         </div>
       </div>
 
-      {/* Quick Stats for Selected Month */}
+      {/* Quick month statistics and status indicators */}
       <div className="mt-4 grid grid-cols-3 gap-4">
         <div className="text-center">
           <div className="text-sm text-gray-600">Month</div>
@@ -220,13 +226,14 @@ const MonthSelector: React.FC<{
   );
 };
 
-// Add Transaction Modal - UPDATED with unified categories
+// Modal for manually adding new transactions with unified category system
 const AddTransactionModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
   onTransactionAdded: () => void;
   selectedMonth: MonthYear;
 }> = ({ isOpen, onClose, onTransactionAdded, selectedMonth }) => {
+  // Form state with default date set to selected month
   const [formData, setFormData] = useState({
     description: '',
     category: '',
@@ -236,6 +243,7 @@ const AddTransactionModal: React.FC<{
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Handle form submission with validation and API call
   const handleSubmit = async () => {
     if (!formData.description || !formData.category || !formData.amount) {
       alert('Please fill in all fields');
@@ -256,8 +264,9 @@ const AddTransactionModal: React.FC<{
       const response = await apiService.createTransaction(transactionData);
       
       if (response.success) {
-        onTransactionAdded();
+        onTransactionAdded(); // Refresh transaction list
         onClose();
+        // Reset form to default state
         setFormData({
           description: '',
           category: '',
@@ -265,6 +274,7 @@ const AddTransactionModal: React.FC<{
           type: 'expense',
           date: `${selectedMonth.year}-${selectedMonth.month.toString().padStart(2, '0')}-${new Date().getDate().toString().padStart(2, '0')}`
         });
+        console.log('Transaction created successfully');
       } else {
         alert('Failed to create transaction');
       }
@@ -292,6 +302,7 @@ const AddTransactionModal: React.FC<{
         </div>
 
         <div className="space-y-4">
+          {/* Transaction date input */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
             <input
@@ -302,6 +313,7 @@ const AddTransactionModal: React.FC<{
             />
           </div>
 
+          {/* Transaction description */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
             <input
@@ -313,6 +325,7 @@ const AddTransactionModal: React.FC<{
             />
           </div>
 
+          {/* Category selection using unified category system */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
             <select
@@ -333,6 +346,7 @@ const AddTransactionModal: React.FC<{
             </select>
           </div>
 
+          {/* Transaction amount */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
             <input
@@ -345,6 +359,7 @@ const AddTransactionModal: React.FC<{
             />
           </div>
 
+          {/* Transaction type (income/expense) */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
             <select
@@ -357,6 +372,7 @@ const AddTransactionModal: React.FC<{
             </select>
           </div>
 
+          {/* Form action buttons */}
           <div className="flex gap-3 pt-4">
             <button
               onClick={onClose}
@@ -381,6 +397,7 @@ const AddTransactionModal: React.FC<{
 const MonthlyTransactions: React.FC = () => {
   const { budget, isLoading: budgetLoading } = useBudget();
   
+  // Transaction data and loading state
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filters, setFilters] = useState<TransactionFilters>({});
@@ -390,7 +407,7 @@ const MonthlyTransactions: React.FC = () => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<MonthYear[]>([]);
   
-  // Default to current month
+  // Initialize with current month as default selection
   const [selectedMonth, setSelectedMonth] = useState<MonthYear>(() => {
     const now = new Date();
     const month = now.getMonth() + 1;
@@ -403,11 +420,12 @@ const MonthlyTransactions: React.FC = () => {
     };
   });
 
-  // Generate available months (current month + last 12 months)
+  // Generate list of available months (current + past 12 months)
   useEffect(() => {
     const months: MonthYear[] = [];
     const now = new Date();
     
+    // Create 13 months of data (current + 12 previous)
     for (let i = 0; i < 13; i++) {
       const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
       const month = date.getMonth() + 1;
@@ -421,28 +439,29 @@ const MonthlyTransactions: React.FC = () => {
       });
     }
     
-    // Sort months with earliest first (reverse chronological order for display)
+    // Sort chronologically with earliest years/months first
     months.sort((a, b) => {
       if (a.year !== b.year) {
-        return a.year - b.year; // Earlier years first
+        return a.year - b.year;
       }
-      return a.month - b.month; // Earlier months first within same year
+      return a.month - b.month;
     });
     
     setAvailableMonths(months);
   }, []);
 
-  // Load transactions for selected month
+  // Load transactions and categories when month or filters change
   useEffect(() => {
     loadTransactions();
     loadCategories();
   }, [selectedMonth, currentPage, filters]);
 
+  // Fetch transactions for selected month with date range filtering
   const loadTransactions = async () => {
     try {
       setIsLoading(true);
       
-      // Calculate start and end dates for the selected month
+      // Calculate month boundaries for API query
       const startDate = new Date(selectedMonth.year, selectedMonth.month - 1, 1);
       const endDate = new Date(selectedMonth.year, selectedMonth.month, 0);
       
@@ -457,6 +476,7 @@ const MonthlyTransactions: React.FC = () => {
       if (response.success && response.data) {
         setTransactions(response.data.transactions || []);
         setTotalPages(response.data.pagination?.totalPages || 1);
+        console.log(`Loaded ${response.data.transactions?.length || 0} transactions for ${selectedMonth.label}`);
       }
     } catch (error) {
       console.error('Failed to load transactions:', error);
@@ -465,6 +485,7 @@ const MonthlyTransactions: React.FC = () => {
     }
   };
 
+  // Load available transaction categories from API with fallback
   const loadCategories = async () => {
     try {
       const response = await apiService.getTransactionCategories();
@@ -477,21 +498,24 @@ const MonthlyTransactions: React.FC = () => {
       }
     } catch (error) {
       console.error('Failed to load categories:', error);
-      // UPDATED: Use unified categories as fallback
+      // Use unified categories as fallback when API fails
       setCategories(ALL_CATEGORIES);
     }
   };
 
+  // Refresh transaction list after new transaction creation
   const handleTransactionAdded = () => {
     loadTransactions();
   };
 
+  // Handle month change and reset pagination
   const handleMonthChange = (month: MonthYear) => {
     setSelectedMonth(month);
     setCurrentPage(1); // Reset to first page when changing months
+    console.log(`Changed to view transactions for ${month.label}`);
   };
 
-  // Calculate monthly spending summary
+  // Calculate monthly spending summary including budget integration
   const monthlySpending = useMemo(() => {
     const totalIncome = transactions
       .filter(t => t.type === 'income')
@@ -501,20 +525,20 @@ const MonthlyTransactions: React.FC = () => {
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
 
-    // ADD: Include budget income (paycheck) to the total income
+    // Include budget income (monthly salary/paycheck) in total income calculation
     const totalIncomeWithPaycheck = totalIncome + (budget.hasSetBudget ? budget.income : 0);
 
     return {
-      totalIncome: totalIncomeWithPaycheck, // Now includes paycheck income
-      transactionIncome: totalIncome, // Separate field for just transaction income
-      paycheckIncome: budget.hasSetBudget ? budget.income : 0, // Paycheck income
+      totalIncome: totalIncomeWithPaycheck, // Combined transaction + budget income
+      transactionIncome: totalIncome, // Only income from transactions
+      paycheckIncome: budget.hasSetBudget ? budget.income : 0, // Budget-defined income
       totalExpenses,
       netAmount: totalIncomeWithPaycheck - totalExpenses,
       transactionCount: transactions.length
     };
   }, [transactions, budget]);
 
-  // Calculate budget progress for selected month
+  // Calculate budget progress for current month only
   const budgetProgress = useMemo(() => {
     if (!budget.hasSetBudget) return null;
     
@@ -532,6 +556,7 @@ const MonthlyTransactions: React.FC = () => {
     };
   }, [budget, monthlySpending]);
 
+  // Format currency values consistently across the component
   const formatCurrency = (amount: number): string => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -539,6 +564,7 @@ const MonthlyTransactions: React.FC = () => {
     }).format(amount);
   };
 
+  // Format dates for transaction display
   const formatDate = (dateString: string): string => {
     return new Date(dateString).toLocaleDateString('en-US', {
       month: 'short',
@@ -549,7 +575,7 @@ const MonthlyTransactions: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto space-y-8 pb-20">
-      {/* Header */}
+      {/* Page header with branding */}
       <div className="text-center">
         <div className="w-20 h-20 bg-gradient-to-br from-green-500 to-blue-500 rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-2xl">
           <DollarSign className="w-10 h-10 text-white" />
@@ -560,16 +586,16 @@ const MonthlyTransactions: React.FC = () => {
         <p className="text-gray-600 text-lg">Track and analyze your spending by month</p>
       </div>
 
-      {/* Month Selector */}
+      {/* Month selection interface */}
       <MonthSelector
         selectedMonth={selectedMonth}
         onMonthChange={handleMonthChange}
         availableMonths={availableMonths}
       />
 
-      {/* Monthly Summary Cards */}
+      {/* Monthly summary cards showing key financial metrics */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Monthly Income */}
+        {/* Total monthly income (transactions + budget) */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-medium text-gray-600">Income</h4>
@@ -581,7 +607,7 @@ const MonthlyTransactions: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">{selectedMonth.label}</p>
         </div>
 
-        {/* Monthly Expenses */}
+        {/* Total monthly expenses */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-medium text-gray-600">Expenses</h4>
@@ -593,7 +619,7 @@ const MonthlyTransactions: React.FC = () => {
           <p className="text-xs text-gray-500 mt-1">{selectedMonth.label}</p>
         </div>
 
-        {/* Net Amount */}
+        {/* Net amount (income - expenses) */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-medium text-gray-600">Net Amount</h4>
@@ -611,7 +637,7 @@ const MonthlyTransactions: React.FC = () => {
           </p>
         </div>
 
-        {/* Transaction Count */}
+        {/* Transaction count for the month */}
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
           <div className="flex items-center justify-between mb-2">
             <h4 className="text-sm font-medium text-gray-600">Transactions</h4>
@@ -624,7 +650,7 @@ const MonthlyTransactions: React.FC = () => {
         </div>
       </div>
 
-      {/* Budget Progress (only for current month) */}
+      {/* Budget progress indicator (only shown for current month) */}
       {budgetProgress && selectedMonth.month === new Date().getMonth() + 1 && selectedMonth.year === new Date().getFullYear() && (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
           <div className="flex justify-between items-center mb-3">
@@ -636,6 +662,7 @@ const MonthlyTransactions: React.FC = () => {
             </span>
           </div>
           
+          {/* Progress bar with color coding based on usage */}
           <div className="w-full bg-gray-200 rounded-full h-4 mb-2">
             <div
               className={`h-4 rounded-full transition-all duration-500 ${
@@ -649,6 +676,7 @@ const MonthlyTransactions: React.FC = () => {
             />
           </div>
           
+          {/* Budget status message with color coding */}
           <div className={`text-sm ${
             budgetProgress.isOverBudget ? 'text-red-600' : 
             budgetProgress.percentage > 80 ? 'text-yellow-600' : 'text-green-600'
@@ -663,11 +691,11 @@ const MonthlyTransactions: React.FC = () => {
         </div>
       )}
 
-      {/* Filters and Search - UPDATED with unified categories */}
+      {/* Transaction filters and search interface */}
       <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
         <h4 className="text-lg font-semibold text-gray-900 mb-4">Filter {selectedMonth.label} Transactions</h4>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Search */}
+          {/* Text search filter */}
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
             <input
@@ -679,7 +707,7 @@ const MonthlyTransactions: React.FC = () => {
             />
           </div>
 
-          {/* Category Filter - UPDATED with unified categories */}
+          {/* Category filter using unified categories */}
           <select
             value={filters.category || ''}
             onChange={(e) => setFilters(prev => ({ ...prev, category: e.target.value || undefined }))}
@@ -697,7 +725,7 @@ const MonthlyTransactions: React.FC = () => {
             ))}
           </select>
 
-          {/* Type Filter */}
+          {/* Transaction type filter */}
           <select
             value={filters.type || ''}
             onChange={(e) => setFilters(prev => ({ ...prev, type: e.target.value || undefined }))}
@@ -708,7 +736,7 @@ const MonthlyTransactions: React.FC = () => {
             <option value="expense">Expense</option>
           </select>
 
-          {/* Clear Filters */}
+          {/* Clear all filters button */}
           <button
             onClick={() => setFilters({})}
             className="px-4 py-2 text-gray-600 hover:text-gray-800 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
@@ -718,7 +746,7 @@ const MonthlyTransactions: React.FC = () => {
         </div>
       </div>
 
-      {/* Transactions Table */}
+      {/* Main transactions table */}
       <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
         <div className="p-4 border-b border-gray-200">
           <h4 className="text-lg font-semibold text-gray-900">
@@ -803,7 +831,7 @@ const MonthlyTransactions: React.FC = () => {
           </table>
         </div>
 
-        {/* Pagination */}
+        {/* Pagination controls for large transaction sets */}
         {totalPages > 1 && (
           <div className="bg-gray-50 px-6 py-3 flex items-center justify-between border-t border-gray-200">
             <div className="text-sm text-gray-700">
@@ -829,7 +857,7 @@ const MonthlyTransactions: React.FC = () => {
         )}
       </div>
 
-      {/* Month Comparison */}
+      {/* Quick month comparison for easy navigation */}
       {availableMonths.length > 1 && (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
           <h4 className="text-lg font-semibold text-gray-900 mb-4">Quick Month Comparison</h4>
@@ -857,7 +885,7 @@ const MonthlyTransactions: React.FC = () => {
         </div>
       )}
 
-      {/* Floating Action Button */}
+      {/* Floating action button for adding new transactions */}
       <button
         onClick={() => setIsAddModalOpen(true)}
         className="fixed bottom-6 right-6 w-14 h-14 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110 flex items-center justify-center z-40"
@@ -866,7 +894,7 @@ const MonthlyTransactions: React.FC = () => {
         <Plus className="w-6 h-6" />
       </button>
 
-      {/* Add Transaction Modal */}
+      {/* Modal for adding new transactions */}
       <AddTransactionModal
         isOpen={isAddModalOpen}
         onClose={() => setIsAddModalOpen(false)}
@@ -874,7 +902,7 @@ const MonthlyTransactions: React.FC = () => {
         selectedMonth={selectedMonth}
       />
 
-      {/* Debug Info (Development Only) */}
+      {/* Development debug information */}
       {import.meta.env.DEV && (
         <div className="mt-6 p-4 bg-gray-800 text-green-400 text-xs rounded-lg font-mono">
           <div className="text-white font-bold mb-2">Monthly Transactions Debug Info</div>

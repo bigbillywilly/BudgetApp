@@ -1,4 +1,4 @@
-// server/src/routes/transaction.routes.ts - FIXED ROUTE ORDER
+// server/src/routes/transaction.routes.ts
 import { Router } from 'express';
 import { transactionController } from '../controllers/transactionController';
 import { validate, transactionSchemas } from '../middleware/validation';
@@ -6,47 +6,37 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-console.log('💳 Loading REAL transaction routes with database integration...');
+console.log('Loading transaction routes with database integration...');
 
-// Apply authentication to all transaction routes
+// All transaction routes require authentication
 router.use(authenticateToken);
 
-// =============================================================================
-// IMPORTANT: SPECIFIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
-// Put all static routes BEFORE /:id to avoid route conflicts
-// =============================================================================
-
-// STATIC ROUTES FIRST (these must come before /:id)
+// Static routes must precede parameterized routes to avoid conflicts
 router.get('/categories', transactionController.getCategories);
 router.get('/analytics/spending-by-category', transactionController.getSpendingByCategory);
 router.get('/analytics/trends', transactionController.getMonthlyTrends);
 
-// GENERAL TRANSACTION ROUTES
+// General transaction CRUD
 router.get('/', transactionController.getTransactions);
 router.post('/', validate(transactionSchemas.createTransaction), transactionController.createTransaction);
 
-// PARAMETERIZED ROUTES LAST (so they don't catch static routes)
+// Parameterized routes for transaction-specific operations
 router.get('/:id', transactionController.getTransaction);
 router.put('/:id', transactionController.updateTransaction);
 router.delete('/:id', transactionController.deleteTransaction);
 
-// =============================================================================
-// TEST/DEBUG ROUTES (Development only)
-// =============================================================================
-
+// Development-only test/debug route
 if (process.env.NODE_ENV === 'development') {
-  // Test route to verify transaction routes are working
   router.get('/test', (req, res) => {
-    console.log('✅ Transaction test route hit');
-    res.json({ 
+    res.json({
       success: true,
-      message: 'Transaction routes are working with REAL controllers!',
+      message: 'Transaction routes are working with real controllers',
       user: req.user,
       timestamp: new Date().toISOString()
     });
   });
 }
 
-console.log('✅ Real transaction routes configured with database controllers');
+console.log('Real transaction routes configured with database controllers');
 
 export { router as transactionRoutes };

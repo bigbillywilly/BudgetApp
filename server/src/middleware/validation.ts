@@ -2,12 +2,12 @@
 import Joi from 'joi';
 import { Request, Response, NextFunction } from 'express';
 
-// Validation middleware factory
+// Middleware: validates request body against provided Joi schema
 export const validate = (schema: Joi.ObjectSchema) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const { error } = schema.validate(req.body, { 
-      abortEarly: false, // Return all errors, not just the first one
-      stripUnknown: true // Remove unknown fields
+      abortEarly: false, // Collect all validation errors
+      stripUnknown: true // Remove fields not defined in schema
     });
 
     if (error) {
@@ -27,7 +27,7 @@ export const validate = (schema: Joi.ObjectSchema) => {
   };
 };
 
-// Auth validation schemas
+// Auth validation schemas for registration, login, and password flows
 export const authSchemas = {
   register: Joi.object({
     email: Joi.string().email().required().messages({
@@ -61,7 +61,7 @@ export const authSchemas = {
   })
 };
 
-// Financial data validation schemas
+// Financial data validation schemas for monthly budget management
 export const financialSchemas = {
   monthlyData: Joi.object({
     month: Joi.number().integer().min(1).max(12).required(),
@@ -78,7 +78,7 @@ export const financialSchemas = {
   })
 };
 
-// Transaction validation schemas
+// Transaction validation schema for creation endpoint
 export const transactionSchemas = {
   createTransaction: Joi.object({
     date: Joi.date().required(),
@@ -99,7 +99,7 @@ export const transactionSchemas = {
   })
 };
 
-// Chat validation schemas
+// Chat validation schema for message sending
 export const chatSchemas = {
   sendMessage: Joi.object({
     message: Joi.string().min(1).max(1000).required().messages({
@@ -109,7 +109,7 @@ export const chatSchemas = {
   })
 };
 
-// File upload validation
+// File upload validation middleware for CSV uploads
 export const fileValidation = {
   validateCSV: (req: Request, res: Response, next: NextFunction) => {
     if (!req.file) {
@@ -119,7 +119,7 @@ export const fileValidation = {
       });
     }
 
-    // Check file type
+    // Enforce CSV file type
     if (req.file.mimetype !== 'text/csv' && !req.file.originalname.endsWith('.csv')) {
       return res.status(400).json({
         success: false,
@@ -127,8 +127,8 @@ export const fileValidation = {
       });
     }
 
-    // Check file size (5MB limit)
-    const maxSize = 5 * 1024 * 1024; // 5MB
+    // Enforce 5MB file size limit
+    const maxSize = 5 * 1024 * 1024;
     if (req.file.size > maxSize) {
       return res.status(400).json({
         success: false,

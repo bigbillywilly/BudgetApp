@@ -1,3 +1,5 @@
+// Smart CSV Upload component with automatic transaction categorization
+// Handles file validation, duplicate detection, and budget analysis
 import React, { useState } from 'react';
 import { 
   Upload, 
@@ -20,7 +22,7 @@ import {
 import { apiService, UploadResponse } from '../../services/api';
 import { useBudget } from '../../context/budgetContext';
 
-// Import unified categories
+// Unified spending categories matching backend categorization system
 const SPENDING_CATEGORIES = {
   'Essential Spending': [
     'Grocery',
@@ -58,43 +60,43 @@ const SPENDING_CATEGORIES = {
   ]
 };
 
-// Enhanced categorization using your actual categories
+// Enhanced categorization using actual spending categories
 const categorizeTransaction = (description: string, amount?: number): string => {
   const desc = description.toLowerCase();
   
-  // Category matching rules using your actual categories
+  // Category matching rules for automatic transaction categorization
   const categoryRules = {
-    // Income recognition (including your MUFG salary)
+    // Income recognition including salary deposits
     'Income': [
       'mufg', 'salary', 'paycheck', 'deposit', 'income', 'pay', 'wage',
       'direct deposit', 'payroll', 'earnings', 'compensation'
     ],
     
-    // Alcohol
+    // Alcohol purchases
     'Alcohol': [
       'bar', 'brewery', 'wine', 'liquor', 'beer', 'spirits', 'cocktail',
       'pub', 'tavern', 'distillery', 'total wine', 'bevmo'
     ],
     
-    // Beauty
+    // Beauty and personal care
     'Beauty': [
       'sephora', 'ulta', 'salon', 'nail', 'spa', 'cosmetic', 'makeup',
       'skincare', 'hair', 'beauty', 'barbershop', 'stylist'
     ],
     
-    // Household
+    // Household items and home improvement
     'Household': [
       'home depot', 'lowes', 'ikea', 'bed bath', 'target home', 'furniture',
       'cleaning', 'detergent', 'toilet paper', 'household', 'supplies'
     ],
     
-    // Credit
+    // Credit card payments and financial services
     'Credit': [
       'credit card', 'payment', 'cc payment', 'balance transfer', 'interest',
       'finance charge', 'late fee'
     ],
     
-    // Dining
+    // Restaurant and dining expenses
     'Dining': [
       'restaurant', 'cafe', 'pizza', 'burger', 'sushi', 'thai', 'chinese',
       'mexican', 'italian', 'diner', 'bistro', 'grill', 'kitchen',
@@ -102,85 +104,85 @@ const categorizeTransaction = (description: string, amount?: number): string => 
       'panera', 'chick-fil-a', 'wendys', 'five guys', 'shake shack'
     ],
     
-    // Drinks/Dessert
+    // Coffee, drinks, and dessert purchases
     'Drinks/Dessert': [
       'starbucks', 'coffee', 'tea', 'dunkin', 'peet', 'caribou',
       'ice cream', 'frozen yogurt', 'dessert', 'bakery', 'donut',
       'smoothie', 'juice', 'boba', 'frappuccino'
     ],
     
-    // Entertainment
+    // Entertainment and subscription services
     'Entertainment': [
       'movie', 'cinema', 'theater', 'concert', 'show', 'ticket',
       'netflix', 'spotify', 'hulu', 'disney', 'amazon prime',
       'youtube', 'game', 'steam', 'playstation', 'xbox', 'nintendo'
     ],
     
-    // Fashion
+    // Fashion and clothing purchases
     'Fashion': [
       'clothing', 'shoes', 'dress', 'shirt', 'pants', 'jacket',
       'nike', 'adidas', 'zara', 'h&m', 'gap', 'old navy', 'uniqlo',
       'nordstrom', 'macys', 'forever 21', 'urban outfitters'
     ],
     
-    // Gifts
+    // Gift purchases and special occasions
     'Gifts': [
       'gift', 'present', 'amazon gift', 'gift card', 'birthday',
       'holiday', 'christmas', 'valentine', 'anniversary'
     ],
     
-    // Grocery
+    // Grocery and food shopping
     'Grocery': [
       'grocery', 'supermarket', 'safeway', 'kroger', 'publix',
       'whole foods', 'trader joe', 'aldi', 'costco grocery',
       'food lion', 'harris teeter', 'giant food', 'wegmans'
     ],
     
-    // Gym
+    // Gym and fitness memberships
     'Gym': [
       'gym', 'fitness', '24 hour fitness', 'planet fitness', 'la fitness',
       'equinox', 'gold gym', 'yoga', 'pilates', 'crossfit',
       'personal trainer', 'membership'
     ],
     
-    // Health
+    // Healthcare and medical expenses
     'Health': [
       'pharmacy', 'cvs', 'walgreens', 'rite aid', 'doctor', 'medical',
       'hospital', 'clinic', 'dentist', 'dental', 'vision', 'health',
       'prescription', 'medicine', 'urgent care'
     ],
     
-    // Laundry
+    // Laundry and dry cleaning services
     'Laundry': [
       'laundry', 'dry clean', 'wash', 'laundromat', 'cleaners'
     ],
     
-    // Merchandise
+    // General merchandise and online shopping
     'Merchandise': [
       'amazon', 'ebay', 'walmart', 'target', 'best buy', 'apple store',
       'shopping', 'retail', 'store', 'mall', 'outlet'
     ],
     
-    // Rideshare
+    // Rideshare and taxi services
     'Rideshare': [
       'uber', 'lyft', 'taxi', 'cab', 'rideshare', 'ride share'
     ],
     
-    // Subscription
+    // Subscription and recurring services
     'Subscription': [
       'subscription', 'monthly', 'netflix', 'spotify', 'hulu', 'disney+',
       'amazon prime', 'apple music', 'youtube premium', 'adobe',
       'microsoft', 'google', 'dropbox', 'icloud', 'membership'
     ],
     
-    // Travel
+    // Travel and transportation expenses
     'Travel': [
       'airline', 'flight', 'hotel', 'motel', 'airbnb', 'booking',
       'expedia', 'rental car', 'hertz', 'avis', 'enterprise',
       'gas', 'fuel', 'parking', 'toll', 'train', 'bus', 'metro'
     ],
     
-    // Wifi / Utilities
+    // Internet, utilities, and communication services
     'Wifi / Utilities': [
       'internet', 'wifi', 'comcast', 'xfinity', 'verizon', 'at&t',
       'spectrum', 'cox', 'phone', 'cell', 'tmobile', 'sprint',
@@ -188,7 +190,7 @@ const categorizeTransaction = (description: string, amount?: number): string => 
     ]
   };
 
-  // Check for income first (including your MUFG salary)
+  // Prioritize income detection for positive amounts
   if (amount && amount > 0) {
     const incomeKeywords = categoryRules['Income'];
     if (incomeKeywords.some(keyword => desc.includes(keyword))) {
@@ -196,7 +198,7 @@ const categorizeTransaction = (description: string, amount?: number): string => 
     }
   }
 
-  // Find best matching category
+  // Find best matching category for expenses
   for (const [categoryName, keywords] of Object.entries(categoryRules)) {
     if (categoryName === 'Income') continue; // Already checked above
     
@@ -205,11 +207,11 @@ const categorizeTransaction = (description: string, amount?: number): string => 
     }
   }
 
-  // Default category
+  // Default category for unmatched transactions
   return 'Other';
 };
 
-// Category icons (same as in your transaction modal)
+// Category icon mapping for visual representation
 const getCategoryIcon = (category: string): string => {
   const icons: { [key: string]: string } = {
     'Alcohol': '🍷',
@@ -247,12 +249,14 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
 }) => {
   const { budget, refreshBudget } = useBudget();
   
+  // Component state management for upload process
   const [isUploading, setIsUploading] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [error, setError] = useState<string>('');
   const [dragActive, setDragActive] = useState(false);
   const [showDuplicateDetails, setShowDuplicateDetails] = useState(false);
 
+  // Handle drag and drop events for file upload
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -263,6 +267,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
     }
   };
 
+  // Process dropped files
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -273,23 +278,28 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
     }
   };
 
+  // Handle file input selection
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       handleFile(e.target.files[0]);
     }
   };
 
+  // Main file processing logic with validation
   const handleFile = async (file: File) => {
+    // Ensure budget is set before processing transactions
     if (!budget.hasSetBudget) {
       setError('Please set up your monthly budget first before uploading transactions');
       return;
     }
 
+    // Validate file type
     if (!file.name.toLowerCase().endsWith('.csv')) {
       setError('Please upload a CSV file');
       return;
     }
 
+    // Validate file size (5MB limit)
     if (file.size > 5 * 1024 * 1024) {
       setError('File size must be less than 5MB');
       return;
@@ -300,31 +310,32 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
     setUploadResult(null);
 
     try {
-      console.log('📄 Uploading CSV file with your category system:', file.name);
+      console.log('Uploading CSV file with categorization system:', file.name);
       
       const response = await apiService.uploadCSV(file);
 
       if (response.success && response.data) {
-        console.log('✅ CSV upload successful with your categories:', response.data);
+        console.log('CSV upload successful with categories:', response.data);
         
         setUploadResult(response.data);
         onUploadComplete?.(response.data);
         
-        // Refresh budget context in case any data changed
+        // Refresh budget context after successful upload
         await refreshBudget();
         
       } else {
         setError(response.error || 'Upload failed');
-        console.error('❌ CSV upload failed:', response.error);
+        console.error('CSV upload failed:', response.error);
       }
     } catch (err) {
-      console.error('❌ CSV upload error:', err);
+      console.error('CSV upload error:', err);
       setError('An unexpected error occurred during upload');
     } finally {
       setIsUploading(false);
     }
   };
 
+  // Utility functions for data formatting
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -354,12 +365,14 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
     });
   };
 
+  // Determine visual styling based on budget status
   const getStatusColor = (percentage: number, isOverBudget: boolean) => {
     if (isOverBudget) return 'from-red-500 to-red-600';
     if (percentage > 80) return 'from-yellow-500 to-orange-500';
     return 'from-green-500 to-blue-500';
   };
 
+  // Calculate duplicate detection status colors
   const getDuplicateStatusColor = (duplicatesFound: number, totalTransactions: number) => {
     const duplicateRate = totalTransactions > 0 
       ? (duplicatesFound / totalTransactions) * 100 
@@ -371,21 +384,23 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
     return 'from-green-500 to-green-600'; // No duplicates
   };
 
+  // Generate duplicate status message based on results
   const getDuplicateStatusMessage = (duplicatesFound: number, newTransactionsAdded: number, totalTransactions: number) => {
     if (duplicatesFound === 0) {
-      return '✨ All transactions were new!';
+      return 'All transactions were new!';
     }
     
     if (newTransactionsAdded === 0) {
-      return '🔄 All transactions already exist in your account';
+      return 'All transactions already exist in your account';
     }
     
     const duplicateRate = (duplicatesFound / totalTransactions) * 100;
-    return `🛡️ Prevented ${duplicatesFound} duplicates (${duplicateRate.toFixed(0)}%)`;
+    return `Prevented ${duplicatesFound} duplicates (${duplicateRate.toFixed(0)}%)`;
   };
 
   return (
     <div className={`bg-white/70 backdrop-blur-sm rounded-3xl shadow-xl p-8 border border-white/20 ${className}`}>
+      {/* Component header with branding */}
       <div className="text-center mb-6">
         <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Upload className="w-8 h-8 text-white" />
@@ -393,6 +408,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
         <h3 className="text-2xl font-bold text-gray-900 mb-2">Smart CSV Upload</h3>
         <p className="text-gray-600">Upload your bank statement with automatic categorization using your personal categories</p>
         
+        {/* Budget status indicator */}
         {budget.hasSetBudget && (
           <div className="mt-3 inline-flex items-center px-3 py-1 bg-green-100 text-green-800 text-sm rounded-full">
             <CheckCircle className="w-4 h-4 mr-1" />
@@ -401,9 +417,10 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
         )}
       </div>
 
+      {/* Upload interface - only show if no results yet */}
       {!uploadResult && (
         <>
-          {/* Budget Required Warning */}
+          {/* Budget setup requirement warning */}
           {!budget.hasSetBudget && (
             <div className="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4">
               <div className="flex items-center">
@@ -418,7 +435,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           )}
 
-          {/* Upload Area */}
+          {/* Main file upload area with drag and drop */}
           <div
             className={`border-2 border-dashed rounded-2xl p-8 text-center transition-all duration-300 ${
               dragActive
@@ -441,6 +458,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
               disabled={isUploading || !budget.hasSetBudget}
             />
             
+            {/* Upload state: processing vs idle */}
             {isUploading ? (
               <div className="space-y-4">
                 <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mx-auto"></div>
@@ -463,7 +481,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             )}
           </div>
 
-          {/* Error Message */}
+          {/* Error message display */}
           {error && (
             <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
               <div className="flex items-center">
@@ -473,16 +491,16 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           )}
 
-          {/* Enhanced Instructions with Your Categories */}
+          {/* Instructions for CSV upload with category information */}
           <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
             <h4 className="font-medium text-blue-900 mb-2 flex items-center">
               <Shield className="w-4 h-4 mr-2" />
               What happens with your categories?
             </h4>
             <ul className="text-sm text-blue-800 space-y-1">
-              <li>• MUFG salary will be automatically recognized as Income 💰</li>
+              <li>• MUFG salary will be automatically recognized as Income</li>
               <li>• Spending categorized into your actual categories (Dining, Rideshare, etc.)</li>
-              <li>• Duplicate transactions will be detected and prevented 🛡️</li>
+              <li>• Duplicate transactions will be detected and prevented</li>
               <li>• Budget analysis against your {formatCurrency(budget.availableToSpend)} monthly budget</li>
               <li>• Categories organized by type: Essential, Food & Drinks, Lifestyle, etc.</li>
             </ul>
@@ -490,10 +508,10 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
         </>
       )}
 
-      {/* Upload Results with Your Categories */}
+      {/* Upload results display with comprehensive analysis */}
       {uploadResult && (
         <div className="space-y-6">
-          {/* Success Header */}
+          {/* Success notification header */}
           <div className="text-center bg-green-50 border border-green-200 rounded-xl p-4">
             <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
             <h4 className="font-bold text-green-900">Upload Complete!</h4>
@@ -512,7 +530,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           </div>
 
-          {/* Duplicate Prevention Summary */}
+          {/* Duplicate detection and prevention summary */}
           {uploadResult.duplicateInfo && (
             <div className={`bg-gradient-to-r ${getDuplicateStatusColor(
               uploadResult.duplicateInfo.duplicatesFound || 0, 
@@ -531,6 +549,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 </div>
               </div>
 
+              {/* Transaction processing statistics */}
               <div className="grid grid-cols-3 gap-4 mb-4">
                 <div className="text-center">
                   <div className="text-xl font-bold">
@@ -552,6 +571,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 </div>
               </div>
 
+              {/* Duplicate prevention status message */}
               <div className="bg-white/20 rounded-xl p-3">
                 <p className="text-sm font-medium">
                   {getDuplicateStatusMessage(
@@ -562,7 +582,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 </p>
               </div>
 
-              {/* Show duplicate details if there are any */}
+              {/* Toggle for duplicate details display */}
               {uploadResult.duplicateInfo.duplicatesFound && uploadResult.duplicateInfo.duplicatesFound > 0 && (
                 <div className="mt-4">
                   <button
@@ -578,7 +598,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           )}
 
-          {/* Budget Analysis */}
+          {/* Budget impact analysis */}
           {uploadResult.budgetAnalysis && (
             <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 border border-blue-200">
               <div className="flex items-center justify-between mb-4">
@@ -590,6 +610,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 )}
               </div>
 
+              {/* Budget vs spending comparison */}
               <div className="grid grid-cols-2 gap-4 mb-4">
                 <div className="bg-white/50 rounded-xl p-4">
                   <p className="text-sm text-gray-600 mb-1">Available to Spend</p>
@@ -607,7 +628,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 </div>
               </div>
 
-              {/* Budget Bar */}
+              {/* Visual budget usage indicator */}
               <div className="mb-4">
                 <div className="flex justify-between text-sm text-gray-600 mb-2">
                   <span>Budget Usage (New Transactions)</span>
@@ -626,18 +647,19 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 </div>
               </div>
 
+              {/* Budget remaining status */}
               <div className="bg-white/50 rounded-xl p-3">
                 <p className="text-sm font-medium text-gray-800">
                   {uploadResult.budgetAnalysis.remaining >= 0 
-                    ? `✅ ${formatCurrency(uploadResult.budgetAnalysis.remaining)} remaining in budget`
-                    : `⚠️ Over budget by ${formatCurrency(Math.abs(uploadResult.budgetAnalysis.remaining))}`
+                    ? `${formatCurrency(uploadResult.budgetAnalysis.remaining)} remaining in budget`
+                    : `Over budget by ${formatCurrency(Math.abs(uploadResult.budgetAnalysis.remaining))}`
                   }
                 </p>
               </div>
             </div>
           )}
 
-          {/* Transaction Summary */}
+          {/* High-level transaction summary */}
           <div className="bg-gray-50 rounded-2xl p-6">
             <h4 className="text-lg font-bold text-gray-900 mb-4">Transaction Summary</h4>
             <div className="grid grid-cols-3 gap-4">
@@ -663,6 +685,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
               </div>
             </div>
             
+            {/* Transaction period and count */}
             <div className="mt-4 pt-4 border-t border-gray-200">
               <div className="flex justify-between text-sm text-gray-600">
                 <span>Period: {formatDate(uploadResult.summary.dateRange.start)} to {formatDate(uploadResult.summary.dateRange.end)}</span>
@@ -671,7 +694,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           </div>
 
-          {/* Category Breakdown with Your Categories and Icons */}
+          {/* Detailed spending breakdown by category */}
           {Object.keys(uploadResult.categoryBreakdown).length > 0 && (
             <div className="bg-white rounded-2xl p-6 border border-gray-200">
               <div className="flex items-center justify-between mb-4">
@@ -679,6 +702,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
                 <PieChart className="w-5 h-5 text-gray-500" />
               </div>
               
+              {/* Category spending breakdown with visual indicators */}
               <div className="space-y-3">
                 {Object.entries(uploadResult.categoryBreakdown)
                   .sort(([,a], [,b]) => b.total - a.total)
@@ -718,10 +742,10 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           )}
 
-          {/* AI Insights */}
+          {/* AI-generated insights about spending patterns */}
           {uploadResult.insights && uploadResult.insights.length > 0 && (
             <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-2xl p-6 border border-purple-200">
-              <h4 className="text-lg font-bold text-gray-900 mb-4">💡 Smart Insights</h4>
+              <h4 className="text-lg font-bold text-gray-900 mb-4">Smart Insights</h4>
               <div className="space-y-3">
                 {uploadResult.insights.map((insight, index) => (
                   <div key={index} className="flex items-start space-x-3">
@@ -733,7 +757,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
             </div>
           )}
 
-          {/* Action Buttons */}
+          {/* Action buttons for next steps */}
           <div className="flex space-x-4">
             <button
               onClick={() => {
@@ -765,7 +789,7 @@ export const SmartCSVUpload: React.FC<SmartCSVUploadProps> = ({
         </div>
       )}
 
-      {/* Debug Info (Development Only) */}
+      {/* Development-only debug information */}
       {import.meta.env.DEV && uploadResult && uploadResult.duplicateInfo && (
         <div className="mt-6 p-4 bg-gray-800 text-green-400 text-xs rounded-lg font-mono">
           <div className="text-white font-bold mb-2">CSV Upload Debug Info (Your Categories)</div>

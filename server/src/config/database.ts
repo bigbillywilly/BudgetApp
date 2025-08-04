@@ -1,11 +1,8 @@
-// server/src/config/database.ts - WITH DEBUG LOGGING
+// server/src/config/database.ts - WITHOUT DEBUG LOGGING
 import { Pool, PoolConfig } from 'pg';
 import { logInfo, logError, logWarn } from '../utils/logger';
 
-// Force IPv4 for Supabase connection
-const DATABASE_URL = process.env.DATABASE_URL;
-const DATABASE_URL_IPV4 = DATABASE_URL?.replace('db.plnpicftnscwdaegwrzk.supabase.co', '54.88.73.86'); // Use IP instead of hostname
-
+// Database configuration interface for connection parameters
 export interface DatabaseConfig {
   host?: string;
   port?: number;
@@ -20,6 +17,7 @@ export interface DatabaseConfig {
   connectionString?: string;
 }
 
+// Database configuration manager with connection pooling
 class DatabaseConfiguration {
   private config: DatabaseConfig;
   private pool: Pool | null = null;
@@ -29,28 +27,16 @@ class DatabaseConfiguration {
     this.validateConfiguration();
   }
 
+  // Load database configuration from environment variables
   private loadConfiguration(): DatabaseConfig {
-    // Ensure .env is loaded before reading environment variables
     try {
       require('dotenv').config();
     } catch (error) {
       console.log('Note: dotenv not available or already loaded');
     }
 
-    // DEBUG: Log what environment variables we're seeing
-    console.log('\n🔍 DEBUGGING ENVIRONMENT VARIABLES:');
-    console.log('DATABASE_URL exists:', !!process.env.DATABASE_URL);
-    console.log('DB_HOST:', process.env.DB_HOST);
-    console.log('DB_PORT:', process.env.DB_PORT);
-    console.log('DB_NAME:', process.env.DB_NAME);
-    console.log('DB_USER:', process.env.DB_USER);
-    console.log('DB_PASSWORD exists:', !!process.env.DB_PASSWORD);
-    console.log('NODE_ENV:', process.env.NODE_ENV);
-    console.log('All env keys that start with DB_:', Object.keys(process.env).filter(key => key.startsWith('DB_')));
-
-    // Force DATABASE_URL usage in production
+    // Prefer DATABASE_URL for production/cloud deployments
     if (process.env.DATABASE_URL) {
-      console.log('\n✅ Using DATABASE_URL for connection');
       return {
         connectionString: process.env.DATABASE_URL,
         ssl: true,
@@ -61,8 +47,7 @@ class DatabaseConfiguration {
       };
     }
     
-    // Fallback to individual config only if DATABASE_URL doesn't exist
-    // Use individual environment variables (local development)
+    // Fallback to individual environment variables for local development
     const config = {
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
@@ -76,21 +61,11 @@ class DatabaseConfiguration {
       connectionTimeoutMillis: parseInt(process.env.DB_CONNECTION_TIMEOUT || '2000')
     };
 
-    console.log('\n🔍 FINAL DATABASE CONFIGURATION:');
-    console.log('Host:', config.host);
-    console.log('Port:', config.port);
-    console.log('Database:', config.database);
-    console.log('User:', config.user);
-    console.log('Password set:', !!config.password);
-    console.log('SSL:', config.ssl);
-    console.log('Max connections:', config.max);
-    console.log('');
-
     return config;
   }
 
+  // Validate required configuration parameters
   private validateConfiguration(): void {
-    // If using DATABASE_URL, skip individual field validation
     if (process.env.DATABASE_URL) {
       logInfo('Database configuration validated (using DATABASE_URL)');
       return;
@@ -104,22 +79,17 @@ class DatabaseConfiguration {
       throw new Error(`Missing required database configuration: ${missing.join(', ')}`);
     }
 
-    // Validate port
+    // Validate numeric constraints
     if (isNaN(this.config.port ?? NaN) || (this.config.port ?? 0) <= 0 || (this.config.port ?? 0) > 65535) {
       throw new Error('Invalid database port number');
     }
 
-    // Validate connection limits
     if (this.config.max <= 0) {
       throw new Error('Maximum connections must be greater than 0');
     }
 
-    if (this.config.min < 0) {
-      throw new Error('Minimum connections cannot be negative');
-    }
-
-    if (this.config.min > this.config.max) {
-      throw new Error('Minimum connections cannot exceed maximum connections');
+    if (this.config.min < 0 || this.config.min > this.config.max) {
+      throw new Error('Invalid connection pool limits');
     }
 
     logInfo('Database configuration validated');
@@ -129,6 +99,7 @@ class DatabaseConfiguration {
     return { ...this.config };
   }
 
+  // Build PostgreSQL pool configuration object
   public getPoolConfig(): PoolConfig {
     const poolConfig: PoolConfig = {
       host: this.config.host,
@@ -149,30 +120,28 @@ class DatabaseConfiguration {
     return poolConfig;
   }
 
+  // Create connection pool instance
   public createPool(): Pool {
     if (this.pool) {
       return this.pool;
     }
 
     if (process.env.DATABASE_URL) {
-      console.log('\n🔗 Creating pool with Supabase Session Pooler...');
-      
       this.pool = new Pool({
-        connectionString: process.env.DATABASE_URL, // Session pooler URL
+        connectionString: process.env.DATABASE_URL,
         ssl: { rejectUnauthorized: false },
-        max: 5, // Lower max for session pooler
+        max: 5,
         min: 1,
         idleTimeoutMillis: this.config.idleTimeoutMillis,
         connectionTimeoutMillis: 15000
       });
       
-      logInfo('Database pool created with Supabase Session Pooler');
+      logInfo('Database pool created with DATABASE_URL');
     } else {
-      console.log('\n🔗 Creating pool with individual config...');
       const poolConfig = this.getPoolConfig();
       this.pool = new Pool(poolConfig);
       
-      logInfo('Database pool created with individual config', {
+      logInfo('Database pool created', {
         host: this.config.host,
         port: this.config.port,
         database: this.config.database,
@@ -180,7 +149,7 @@ class DatabaseConfiguration {
       });
     }
 
-    // Basic error handling
+    // Handle pool errors
     this.pool.on('error', (err) => {
       logError('Database pool error', { error: err.message });
     });
@@ -188,32 +157,15 @@ class DatabaseConfiguration {
     return this.pool;
   }
 
+  // Test database connectivity
   public async testConnection(pool?: Pool): Promise<boolean> {
     const testPool = pool || this.createPool();
     
-    console.log('\n🧪 TESTING DATABASE CONNECTION...');
-    if (process.env.DATABASE_URL) {
-      console.log('Using DATABASE_URL connection');
-    } else {
-      console.log('Using individual config:', {
-        host: this.config.host,
-        port: this.config.port,
-        database: this.config.database,
-        user: this.config.user
-      });
-    }
-    
     try {
-      console.log('1. Attempting to get client from pool...');
       const client = await testPool.connect();
       
-      console.log('2. Client connected! Running test query...');
       const result = await client.query('SELECT NOW() as current_time, version() as version');
       client.release();
-
-      console.log('3. ✅ SUCCESS! Database connection working!');
-      console.log('   PostgreSQL Version:', result.rows[0].version.split(' ').slice(0, 2).join(' '));
-      console.log('   Current Time:', result.rows[0].current_time);
 
       logInfo('Database connection test successful', {
         currentTime: result.rows[0].current_time,
@@ -223,16 +175,9 @@ class DatabaseConfiguration {
 
       return true;
     } catch (error: any) {
-      console.log('❌ DATABASE CONNECTION FAILED!');
-      console.log('Error Message:', error.message);
-      console.log('Error Code:', error.code);
-      console.log('Error Details:', error.detail);
-      console.log('Full Error:', error);
-
-      logError('Database connection test failed - DETAILED', {
+      logError('Database connection test failed', {
         errorMessage: error.message,
         errorCode: error.code,
-        errorDetail: error.detail,
         connectionMethod: process.env.DATABASE_URL ? 'DATABASE_URL' : 'individual_config'
       });
       
@@ -240,6 +185,7 @@ class DatabaseConfiguration {
     }
   }
 
+  // Get database metadata and statistics
   public async getDatabaseInfo(pool?: Pool): Promise<{
     version: string;
     size: string;
@@ -250,30 +196,19 @@ class DatabaseConfiguration {
     try {
       const client = await testPool.connect();
       
-      // Get PostgreSQL version
-      const versionResult = await client.query('SELECT version()');
-      const version = versionResult.rows[0].version;
-
-      // Get database size
-      const sizeResult = await client.query(`
-        SELECT pg_size_pretty(pg_database_size(current_database())) as size
-      `);
-      const size = sizeResult.rows[0].size;
-
-      // Get table count
-      const tableResult = await client.query(`
-        SELECT COUNT(*) as table_count 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public'
-      `);
-      const tableCount = parseInt(tableResult.rows[0].table_count);
+      // Get version, size, and table count in parallel
+      const [versionResult, sizeResult, tableResult] = await Promise.all([
+        client.query('SELECT version()'),
+        client.query('SELECT pg_size_pretty(pg_database_size(current_database())) as size'),
+        client.query('SELECT COUNT(*) as table_count FROM information_schema.tables WHERE table_schema = \'public\'')
+      ]);
 
       client.release();
 
       return {
-        version: version.split(' ').slice(0, 2).join(' '),
-        size,
-        tableCount
+        version: versionResult.rows[0].version.split(' ').slice(0, 2).join(' '),
+        size: sizeResult.rows[0].size,
+        tableCount: parseInt(tableResult.rows[0].table_count)
       };
     } catch (error) {
       logError('Failed to get database information', error);
@@ -281,6 +216,7 @@ class DatabaseConfiguration {
     }
   }
 
+  // Close connection pool gracefully
   public async closePool(): Promise<void> {
     if (this.pool) {
       logInfo('Closing database pool...');
@@ -290,6 +226,7 @@ class DatabaseConfiguration {
     }
   }
 
+  // Get current pool connection statistics
   public getPoolStats() {
     if (!this.pool) {
       return null;
@@ -302,6 +239,7 @@ class DatabaseConfiguration {
     };
   }
 
+  // Health check for monitoring systems
   public async healthCheck(): Promise<{
     status: 'healthy' | 'unhealthy';
     responseTime: number;
@@ -332,6 +270,7 @@ class DatabaseConfiguration {
     }
   }
 
+  // Execute query with automatic retry logic
   public async executeWithRetry<T extends any[] = any[]>(
     query: string,
     params?: any[],
@@ -352,12 +291,7 @@ class DatabaseConfiguration {
           break;
         }
 
-        logWarn('Database query failed, retrying...', {
-          attempt,
-          maxRetries,
-          error: lastError.message
-        });
-
+        // Exponential backoff
         await new Promise(resolve => setTimeout(resolve, retryDelay * attempt));
       }
     }
@@ -371,10 +305,10 @@ class DatabaseConfiguration {
   }
 }
 
-// Export singleton instance
+// Singleton instance for application-wide use
 export const databaseConfig = new DatabaseConfiguration();
 
-// Export convenience functions
+// Convenience exports for common operations
 export const getDatabaseConfig = () => databaseConfig.getConfig();
 export const getPoolConfig = () => databaseConfig.getPoolConfig();
 export const createDatabasePool = () => databaseConfig.createPool();

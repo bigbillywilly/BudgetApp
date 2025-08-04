@@ -7,15 +7,12 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-console.log('🔐 Loading REAL auth routes with database integration...');
+console.log('Loading auth routes with database integration...');
 
-// Apply rate limiting to all auth routes
+// Apply rate limiting to all authentication endpoints
 router.use(authLimiter);
 
-// =============================================================================
-// PUBLIC ROUTES (No authentication required)
-// =============================================================================
-
+// Public authentication endpoints
 // Register new user
 router.post('/register', validate(authSchemas.register), authController.register);
 
@@ -34,10 +31,7 @@ router.post('/forgot-password', validate(authSchemas.forgotPassword), authContro
 // Reset password with token
 router.post('/reset-password', validate(authSchemas.resetPassword), authController.resetPassword);
 
-// =============================================================================
-// PROTECTED ROUTES (Authentication required)
-// =============================================================================
-
+// Protected endpoints (JWT required)
 // Get user profile
 router.get('/profile', authenticateToken, authController.getProfile);
 
@@ -47,33 +41,27 @@ router.put('/profile', authenticateToken, authController.updateProfile);
 // Logout user
 router.post('/logout', authenticateToken, authController.logout);
 
-// =============================================================================
-// TEST/DEBUG ROUTES (Development only)
-// =============================================================================
-
+// Development-only test/debug endpoints
 if (process.env.NODE_ENV === 'development') {
-  // Test route to verify auth routes are working
   router.get('/test', (req, res) => {
-    console.log('✅ Auth test route hit');
-    res.json({ 
+    res.json({
       success: true,
-      message: 'Auth routes are working with REAL controllers!',
+      message: 'Auth routes are working with real controllers',
       timestamp: new Date().toISOString(),
       environment: process.env.NODE_ENV
     });
   });
 
-  // Test protected route
   router.get('/test-protected', authenticateToken, (req, res) => {
     res.json({
       success: true,
-      message: 'Protected route working!',
+      message: 'Protected route working',
       user: req.user,
       timestamp: new Date().toISOString()
     });
   });
 }
 
-console.log('✅ Real auth routes configured with database controllers');
+console.log('Auth routes configured with database controllers');
 
 export { router as authRoutes };

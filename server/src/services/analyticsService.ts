@@ -32,6 +32,7 @@ interface BudgetAnalysis {
   }>;
 }
 
+// Analytics service for financial trends, category breakdowns, and insights
 class AnalyticsService {
   private pool: Pool;
 
@@ -59,7 +60,6 @@ class AnalyticsService {
         ORDER BY total_amount DESC
       `, [userId, startDate, endDate]);
 
-      // Calculate total for percentage calculation
       const totalSpent = result.rows.reduce((sum, row) => sum + parseFloat(row.total_amount), 0);
 
       return result.rows.map(row => ({
@@ -74,7 +74,7 @@ class AnalyticsService {
     }
   }
 
-  // Get monthly trends for the past year
+  // Get monthly income, expenses, and savings trends for the past year
   async getMonthlyTrends(userId: string): Promise<MonthlyTrend[]> {
     try {
       const result = await this.pool.query(`
@@ -105,10 +105,9 @@ class AnalyticsService {
     }
   }
 
-  // Analyze budget vs actual spending
+  // Analyze budget vs actual spending for a given month
   async getBudgetAnalysis(userId: string, month: number, year: number): Promise<BudgetAnalysis | null> {
     try {
-      // Get planned budget
       const budgetResult = await this.pool.query(
         'SELECT income, fixed_expenses, savings_goal FROM monthly_data WHERE user_id = $1 AND month = $2 AND year = $3',
         [userId, month, year]
@@ -121,7 +120,6 @@ class AnalyticsService {
       const budget = budgetResult.rows[0];
       const availableToBudget = parseFloat(budget.income) - parseFloat(budget.fixed_expenses) - parseFloat(budget.savings_goal);
 
-      // Get actual spending by category
       const spendingResult = await this.pool.query(`
         SELECT 
           category,
@@ -136,10 +134,10 @@ class AnalyticsService {
 
       const totalSpent = spendingResult.rows.reduce((sum, row) => sum + parseFloat(row.spent), 0);
 
-      // Simple budget allocation (equal distribution among categories for now)
+      // Simple equal distribution of budget across categories
       const categories = spendingResult.rows.map(row => {
         const spent = parseFloat(row.spent);
-        const budgetedPerCategory = availableToBudget / spendingResult.rows.length; // Simple equal distribution
+        const budgetedPerCategory = availableToBudget / spendingResult.rows.length;
 
         let status: 'under' | 'over' | 'on-track';
         if (spent > budgetedPerCategory * 1.1) {
@@ -172,7 +170,7 @@ class AnalyticsService {
     }
   }
 
-  // Get insights and recommendations
+  // Generate insights, recommendations, and alerts based on user trends and category spending
   async getFinancialInsights(userId: string): Promise<{
     insights: string[];
     recommendations: string[];
@@ -183,27 +181,24 @@ class AnalyticsService {
       const recommendations: string[] = [];
       const alerts: string[] = [];
 
-      // Get recent trends
+      // Analyze recent monthly trends
       const trends = await this.getMonthlyTrends(userId);
       
       if (trends.length >= 2) {
         const recent = trends[trends.length - 1];
         const previous = trends[trends.length - 2];
         
-        // Income trend analysis
         if (recent.income > previous.income) {
           insights.push(`Your income increased by $${(recent.income - previous.income).toFixed(2)} from last month`);
         } else if (recent.income < previous.income) {
           insights.push(`Your income decreased by $${(previous.income - recent.income).toFixed(2)} from last month`);
         }
 
-        // Expense trend analysis
         if (recent.expenses > previous.expenses * 1.1) {
           alerts.push('Your spending increased significantly this month');
           recommendations.push('Review your recent expenses to identify areas where you can cut back');
         }
 
-        // Savings analysis
         if (recent.savings < 0) {
           alerts.push('You spent more than you earned this month');
           recommendations.push('Consider creating a stricter budget to avoid overspending');
@@ -212,7 +207,7 @@ class AnalyticsService {
         }
       }
 
-      // Get category analysis for current month
+      // Analyze top spending category for current month
       const currentDate = new Date();
       const startOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
       const endOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0);

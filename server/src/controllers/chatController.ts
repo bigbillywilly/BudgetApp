@@ -3,8 +3,9 @@ import { Request, Response } from 'express';
 import { aiService } from '../services/aiService';
 import { logInfo, logError } from '../utils/logger';
 
+// AI chat controller for financial advisory conversations
 export const chatController = {
-  // POST /api/chat/message
+  // Process user message and generate AI response
   async sendMessage(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -24,10 +25,10 @@ export const chatController = {
         });
       }
 
-      // Generate AI response
+      // Generate AI response with financial context
       const aiResponse = await aiService.generateResponse(userId, message);
 
-      // Save to database
+      // Persist conversation to database
       await aiService.saveChatMessage(
         userId, 
         message, 
@@ -59,7 +60,7 @@ export const chatController = {
     }
   },
 
-  // GET /api/chat/history
+  // Retrieve user's chat conversation history
   async getChatHistory(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -88,7 +89,7 @@ export const chatController = {
     }
   },
 
-  // GET /api/chat/insights
+  // Generate AI-powered financial insights for user
   async getInsights(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -115,7 +116,7 @@ export const chatController = {
     }
   },
 
-  // POST /api/chat/quick-question
+  // Handle predefined quick financial questions
   async quickQuestion(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -128,7 +129,7 @@ export const chatController = {
       const { question } = req.body;
       const userId = req.user.userId;
 
-      // Predefined quick questions with enhanced responses
+      // Map of predefined financial question categories
       const quickQuestions: { [key: string]: string } = {
         'emergency_fund': 'How can I create an emergency fund?',
         'debt_management': 'What\'s the best way to pay off debt?',
@@ -146,10 +147,10 @@ export const chatController = {
         });
       }
 
-      // Generate AI response for the quick question
+      // Generate AI response for predefined question
       const aiResponse = await aiService.generateResponse(userId, questionText);
 
-      // Save to database
+      // Save interaction to conversation history
       await aiService.saveChatMessage(
         userId, 
         questionText, 

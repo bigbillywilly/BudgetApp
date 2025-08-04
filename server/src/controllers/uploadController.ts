@@ -1,4 +1,3 @@
-// server/src/controllers/uploadController.ts - ENHANCED DUPLICATE PREVENTION
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
 import multer from 'multer';
@@ -9,7 +8,7 @@ import { db } from '../database/connection';
 import { logInfo, logError, logWarn } from '../utils/logger';
 import { csvProcessingService } from '../services/csvProcessingService';
 
-// Configure multer for file uploads
+// Configure multer for secure CSV file uploads
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     const uploadDir = path.join(__dirname, '../../uploads');
@@ -46,6 +45,7 @@ interface MulterRequest extends Request {
   files?: any;
 }
 
+// CSV upload controller with advanced duplicate detection and file overlap analysis
 class UploadController {
   private pool: Pool;
 
@@ -53,7 +53,7 @@ class UploadController {
     this.pool = db.getPool();
   }
 
-  // Enhanced duplicate detection with file overlap analysis
+  // Advanced duplicate detection with file overlap analysis to prevent re-uploads
   private async checkForDuplicates(
     client: any,
     userId: string,
@@ -76,13 +76,14 @@ class UploadController {
     const duplicatesByUpload = new Map<string, number>();
     let duplicateCount = 0;
 
-    logInfo('Starting enhanced duplicate check with file overlap analysis', {
+    logInfo('Starting duplicate check with file overlap analysis', {
       userId,
       totalTransactions: transactions.length,
       filename: currentFilename
     });
 
-    // Create a batch query to check all transactions at once for better performance
+    // Process transactions in batches for database performance
+    const batchSize = 100;
     const transactionChecks = transactions.map((transaction, index) => ({
       index,
       date: transaction.transactionDate,
@@ -91,14 +92,11 @@ class UploadController {
       transaction
     }));
 
-    // Process transactions in batches to avoid overwhelming the database
-    const batchSize = 100;
     for (let i = 0; i < transactionChecks.length; i += batchSize) {
       const batch = transactionChecks.slice(i, i + batchSize);
       
       for (const check of batch) {
-        // Enhanced duplicate detection query
-        // Check for exact matches on: user_id, transaction_date, description (normalized), and amount (within 1 cent)
+        // Exact match detection: user_id, date, normalized description, amount within 1 cent
         const duplicateCheck = await client.query(`
           SELECT 
             t.id, 
@@ -127,7 +125,7 @@ class UploadController {
           duplicateCount++;
           const existingTransaction = duplicateCheck.rows[0];
           
-          // Track which upload this duplicate came from
+          // Track duplicates by source upload for overlap analysis
           if (existingTransaction.csv_upload_id) {
             const uploadCount = duplicatesByUpload.get(existingTransaction.csv_upload_id) || 0;
             duplicatesByUpload.set(existingTransaction.csv_upload_id, uploadCount + 1);
@@ -152,8 +150,7 @@ class UploadController {
             amount: check.amount,
             existingTransactionId: existingTransaction.id,
             existingUploadId: existingTransaction.csv_upload_id,
-            existingFilename: existingTransaction.upload_filename,
-            duplicateCount: duplicateCheck.rows.length
+            existingFilename: existingTransaction.upload_filename
           });
         } else {
           newTransactions.push(check.transaction);
@@ -161,7 +158,7 @@ class UploadController {
       }
     }
 
-    // NEW: Analyze file overlap to detect potential re-uploads or similar files
+    // Analyze file overlap patterns to detect potential re-uploads
     const fileOverlapAnalysis = await this.analyzeFileOverlap(
       client,
       userId,
@@ -171,13 +168,12 @@ class UploadController {
       duplicateCount
     );
 
-    logInfo('Enhanced duplicate check completed with file overlap analysis', {
+    logInfo('Duplicate check completed with file overlap analysis', {
       userId,
       filename: currentFilename,
       totalTransactions: transactions.length,
       newTransactions: newTransactions.length,
       duplicates: duplicateCount,
-      duplicatesByUpload: Object.fromEntries(duplicatesByUpload),
       fileOverlapAnalysis
     });
 
@@ -190,7 +186,7 @@ class UploadController {
     };
   }
 
-  // NEW: Analyze file overlap to detect potential re-uploads
+  // Analyze file overlap patterns to detect potential re-uploads or similar files
   private async analyzeFileOverlap(
     client: any,
     userId: string,
@@ -209,12 +205,11 @@ class UploadController {
       let mostSimilarUpload = null;
       let maxOverlapCount = 0;
 
-      // Find the upload with the most overlapping transactions
+      // Find upload with highest transaction overlap
       for (const [uploadId, overlapCount] of Array.from(duplicatesByUpload.entries())) {
         if (overlapCount > maxOverlapCount) {
           maxOverlapCount = overlapCount;
           
-          // Get details about this upload
           const uploadDetails = await client.query(`
             SELECT 
               id,
@@ -235,7 +230,7 @@ class UploadController {
         }
       }
 
-      // Check for exact filename matches in previous uploads
+      // Check for exact filename matches in upload history
       const sameFilenameUploads = await client.query(`
         SELECT 
           id,
@@ -250,13 +245,13 @@ class UploadController {
         LIMIT 5
       `, [userId, currentFilename]);
 
-      // Determine if this looks like a potential re-upload
+      // Determine re-upload probability based on overlap metrics
       const isPotentialReupload = 
-        overlapPercentage >= 30 || // 30% or more transactions are duplicates
+        overlapPercentage >= 30 || // 30%+ duplicate transactions
         sameFilenameUploads.rows.length > 0 || // Same filename uploaded before
-        (mostSimilarUpload && mostSimilarUpload.overlapCount >= Math.min(10, totalTransactions * 0.5)); // Significant overlap
+        (mostSimilarUpload && mostSimilarUpload.overlapCount >= Math.min(10, totalTransactions * 0.5));
 
-      // If we found same filename uploads, use the most recent one as most similar
+      // Prioritize exact filename matches for similarity detection
       if (sameFilenameUploads.rows.length > 0 && (!mostSimilarUpload || sameFilenameUploads.rows[0].upload_date > mostSimilarUpload.upload_date)) {
         mostSimilarUpload = {
           ...sameFilenameUploads.rows[0],
@@ -282,7 +277,7 @@ class UploadController {
     }
   }
 
-  // Helper method to analyze duplicate patterns
+  // Analyze duplicate transaction patterns for user feedback
   private analyzeDuplicatePatterns(duplicates: any[]): {
     sameDay: number;
     sameAmount: number;
@@ -296,7 +291,7 @@ class UploadController {
       categories: {} as { [key: string]: number }
     };
 
-    // Group duplicates by date to identify same-day duplicates
+    // Group duplicates by date to identify same-day patterns
     const dateGroups = duplicates.reduce((groups, dup) => {
       const date = dup.date;
       if (!groups[date]) groups[date] = [];
@@ -306,14 +301,14 @@ class UploadController {
 
     analysis.sameDay = Object.keys(dateGroups).length;
 
-    // Analyze amount patterns
+    // Analyze unique amount patterns
     const amounts = duplicates.map(d => d.amount);
     analysis.sameAmount = new Set(amounts).size;
 
     return analysis;
   }
 
-  // POST /api/upload/csv - ENHANCED WITH COMPREHENSIVE DUPLICATE PREVENTION
+  // Upload and process CSV file with comprehensive duplicate prevention
   async uploadCSV(req: Request, res: Response) {
     const client = await this.pool.connect();
     
@@ -336,7 +331,7 @@ class UploadController {
       const file = req.file;
       const uploadId = uuidv4();
 
-      logInfo('CSV upload started with enhanced duplicate prevention', {
+      logInfo('CSV upload started with duplicate prevention', {
         userId,
         filename: file.originalname,
         size: file.size,
@@ -345,13 +340,13 @@ class UploadController {
 
       await client.query('BEGIN');
 
-      // 1. Create upload record
+      // Create upload record with processing status
       await client.query(`
         INSERT INTO csv_uploads (id, user_id, filename, file_size, status)
         VALUES ($1, $2, $3, $4, 'processing')
       `, [uploadId, userId, file.originalname, file.size]);
 
-      // 2. Read and process CSV file
+      // Process CSV file and extract transaction data
       const csvContent = fs.readFileSync(file.path, 'utf8');
       const processedData = await csvProcessingService.processCSV(csvContent);
 
@@ -363,7 +358,7 @@ class UploadController {
         dateRange: processedData.summary.dateRange
       });
 
-      // 3. Enhanced duplicate checking with file overlap analysis
+      // Run comprehensive duplicate detection with file overlap analysis
       const duplicateCheckResult = await this.checkForDuplicates(
         client,
         userId,
@@ -371,10 +366,10 @@ class UploadController {
         file.originalname
       );
 
-      // 4. Analyze duplicate patterns for better user feedback
+      // Analyze duplicate patterns for detailed user feedback
       const duplicateAnalysis = this.analyzeDuplicatePatterns(duplicateCheckResult.duplicates);
 
-      // 5. Insert only NEW transactions into database with detailed tracking
+      // Insert only new transactions with error tracking
       let insertedCount = 0;
       const insertedTransactions = [];
       const failedInserts = [];
@@ -414,7 +409,7 @@ class UploadController {
         }
       }
 
-      // 6. Update upload record with comprehensive results
+      // Update upload record with final results
       await client.query(`
         UPDATE csv_uploads 
         SET processed_transactions = $1, status = $2
@@ -425,7 +420,7 @@ class UploadController {
         uploadId
       ]);
 
-      // 7. Get user's monthly budget to calculate spending analysis
+      // Calculate budget impact for current month if budget exists
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
@@ -444,7 +439,7 @@ class UploadController {
                                 parseFloat(monthlyData.fixed_expenses) - 
                                 parseFloat(monthlyData.savings_goal);
         
-        // Calculate spending from NEW transactions only
+        // Calculate spending impact from new transactions only
         const totalSpent = duplicateCheckResult.newTransactions
           .filter(t => t.type === 'debit')
           .reduce((sum, t) => sum + t.amount, 0);
@@ -465,14 +460,14 @@ class UploadController {
 
       await client.query('COMMIT');
 
-      // 8. Clean up uploaded file
+      // Clean up temporary file
       try {
         fs.unlinkSync(file.path);
       } catch (error) {
         logError('Failed to delete uploaded file', error);
       }
 
-      // 9. Create enhanced summary with only new transactions
+      // Generate summary for new transactions only
       const enhancedSummary = {
         totalTransactions: duplicateCheckResult.newTransactions.length,
         totalDebits: duplicateCheckResult.newTransactions
@@ -482,11 +477,11 @@ class UploadController {
           .filter(t => t.type === 'credit')
           .reduce((sum, t) => sum + t.amount, 0),
         dateRange: processedData.summary.dateRange,
-        netAmount: 0 // will be set below
+        netAmount: 0
       };
       enhancedSummary.netAmount = enhancedSummary.totalCredits - enhancedSummary.totalDebits;
 
-      // 10. Create category breakdown for new transactions only
+      // Create category breakdown for new transactions
       const newCategoryBreakdown: { [key: string]: { total: number; count: number } } = {};
       duplicateCheckResult.newTransactions.forEach(transaction => {
         if (!newCategoryBreakdown[transaction.aiCategory]) {
@@ -496,75 +491,75 @@ class UploadController {
         newCategoryBreakdown[transaction.aiCategory].count += 1;
       });
 
-      // 11. Enhanced insights with detailed duplicate information and file overlap warnings
+      // Generate insights with file overlap warnings
       const enhancedInsights = [];
       
-      // NEW: Add file overlap warnings first
+      // Add file overlap warnings based on analysis
       if (duplicateCheckResult.fileOverlapAnalysis.isPotentialReupload) {
         if (duplicateCheckResult.fileOverlapAnalysis.overlapPercentage >= 80) {
           enhancedInsights.push(
-            `⚠️ This file appears to be a re-upload! ${duplicateCheckResult.fileOverlapAnalysis.overlapPercentage.toFixed(0)}% of transactions already exist in your account`
+            `This file appears to be a re-upload! ${duplicateCheckResult.fileOverlapAnalysis.overlapPercentage.toFixed(0)}% of transactions already exist in your account`
           );
         } else if (duplicateCheckResult.fileOverlapAnalysis.overlapPercentage >= 50) {
           enhancedInsights.push(
-            `🔄 This file contains many transactions that were already uploaded (${duplicateCheckResult.fileOverlapAnalysis.overlapPercentage.toFixed(0)}% overlap)`
+            `This file contains many transactions that were already uploaded (${duplicateCheckResult.fileOverlapAnalysis.overlapPercentage.toFixed(0)}% overlap)`
           );
         } else if (duplicateCheckResult.fileOverlapAnalysis.overlapPercentage >= 30) {
           enhancedInsights.push(
-            `📋 Some transactions in this file overlap with previous uploads (${duplicateCheckResult.fileOverlapAnalysis.overlapPercentage.toFixed(0)}% overlap)`
+            `Some transactions in this file overlap with previous uploads (${duplicateCheckResult.fileOverlapAnalysis.overlapPercentage.toFixed(0)}% overlap)`
           );
         }
 
-        // Add specific information about the most similar upload
+        // Add specific information about most similar upload
         if (duplicateCheckResult.fileOverlapAnalysis.mostSimilarUpload) {
           const similarUpload = duplicateCheckResult.fileOverlapAnalysis.mostSimilarUpload;
           const uploadDate = new Date(similarUpload.upload_date).toLocaleDateString();
           
           if (similarUpload.isExactFilenameMatch) {
             enhancedInsights.push(
-              `📄 You previously uploaded a file with the same name "${similarUpload.filename}" on ${uploadDate}`
+              `You previously uploaded a file with the same name "${similarUpload.filename}" on ${uploadDate}`
             );
           } else {
             enhancedInsights.push(
-              `📄 Most similar previous upload: "${similarUpload.filename}" (${uploadDate}) with ${similarUpload.overlapCount} matching transactions`
+              `Most similar previous upload: "${similarUpload.filename}" (${uploadDate}) with ${similarUpload.overlapCount} matching transactions`
             );
           }
         }
       }
       
+      // Add duplicate processing insights
       if (duplicateCheckResult.duplicateCount > 0) {
         enhancedInsights.push(
-          `🔍 Found ${duplicateCheckResult.duplicateCount} duplicate transactions that were automatically skipped`
+          `Found ${duplicateCheckResult.duplicateCount} duplicate transactions that were automatically skipped`
         );
         
         if (duplicateCheckResult.duplicateCount === processedData.transactions.length) {
           enhancedInsights.push(
-            `📋 All transactions in this file already exist in your account - no new data was added`
+            `All transactions in this file already exist in your account - no new data was added`
           );
         } else {
           enhancedInsights.push(
-            `✅ ${insertedCount} new transactions were successfully added to your account`
+            `${insertedCount} new transactions were successfully added to your account`
           );
         }
 
-        // Add duplicate pattern insights
         if (duplicateAnalysis.sameDay > 1) {
           enhancedInsights.push(
-            `📅 Found duplicates across ${duplicateAnalysis.sameDay} different dates`
+            `Found duplicates across ${duplicateAnalysis.sameDay} different dates`
           );
         }
       } else {
         enhancedInsights.push(
-          `🎉 All ${insertedCount} transactions were new and successfully added!`
+          `All ${insertedCount} transactions were new and successfully added!`
         );
       }
 
-      // Add original insights for new transactions
+      // Add original AI insights for new transactions
       if (insertedCount > 0) {
         enhancedInsights.push(...processedData.insights);
       }
 
-      // 12. Get information about previous uploads from the same file (if any)
+      // Get previous uploads of same filename for context
       const previousUploadsResult = await client.query(`
         SELECT id, filename, upload_date, processed_transactions
         FROM csv_uploads 
@@ -573,7 +568,7 @@ class UploadController {
         LIMIT 3
       `, [userId, file.originalname, uploadId]);
 
-      // 13. Return comprehensive response with enhanced duplicate information
+      // Return comprehensive response with duplicate prevention details
       const response = {
         success: true,
         message: this.generateUploadMessage(
@@ -595,25 +590,23 @@ class UploadController {
           insights: enhancedInsights,
           categories: Object.keys(newCategoryBreakdown),
           
-          // Enhanced duplicate information with file overlap analysis
+          // Comprehensive duplicate information
           duplicateInfo: {
             duplicatesFound: duplicateCheckResult.duplicateCount,
             duplicatesSkipped: duplicateCheckResult.duplicateCount,
             newTransactionsAdded: insertedCount,
             totalTransactionsInFile: processedData.transactions.length,
-            duplicateDetails: duplicateCheckResult.duplicates.slice(0, 10), // Show first 10 duplicates
+            duplicateDetails: duplicateCheckResult.duplicates.slice(0, 10),
             duplicateAnalysis,
             duplicatesByUpload: Object.fromEntries(duplicateCheckResult.duplicatesByUpload),
             previousUploadsOfSameFile: previousUploadsResult.rows,
             failedInserts: failedInserts.length,
-            
-            // NEW: File overlap analysis
             fileOverlapAnalysis: duplicateCheckResult.fileOverlapAnalysis
           }
         }
       };
 
-      logInfo('CSV upload completed successfully with enhanced duplicate prevention', {
+      logInfo('CSV upload completed with duplicate prevention', {
         userId,
         uploadId,
         filename: file.originalname,
@@ -630,7 +623,7 @@ class UploadController {
 
     } catch (error: any) {
       await client.query('ROLLBACK');
-      logError('CSV upload error with enhanced duplicate prevention', error);
+      logError('CSV upload error with duplicate prevention', error);
 
       // Clean up file on error
       if (req.file?.path) {
@@ -658,7 +651,7 @@ class UploadController {
     }
   }
 
-  // Helper method to generate user-friendly upload messages with file overlap context
+  // Generate contextual upload messages based on file overlap analysis
   private generateUploadMessage(
     insertedCount: number, 
     duplicateCount: number, 
@@ -677,7 +670,7 @@ class UploadController {
       }
     }
 
-    // Standard duplicate handling for non-overlapping files
+    // Standard messaging for non-overlapping files
     if (duplicateCount === 0) {
       return `Successfully processed ${insertedCount} new transactions.`;
     }
@@ -693,7 +686,7 @@ class UploadController {
     return `Successfully processed ${insertedCount} new transactions. Skipped ${duplicateCount} duplicates (${duplicatePercentage}% of file).`;
   }
 
-  // Enhanced method to get detailed duplicate report for a specific upload
+  // Get detailed duplicate report for specific upload
   async getDuplicateReport(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -753,7 +746,7 @@ class UploadController {
     }
   }
 
-  // Existing methods remain the same...
+  // Get paginated upload history
   async getUploadHistory(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -810,6 +803,7 @@ class UploadController {
     }
   }
 
+  // Get transactions for specific upload
   async getUploadTransactions(req: Request, res: Response) {
     try {
       if (!req.user) {
@@ -849,6 +843,7 @@ class UploadController {
     }
   }
 
+  // Delete upload and associated transactions
   async deleteUpload(req: Request, res: Response) {
     const client = await this.pool.connect();
     
@@ -865,7 +860,7 @@ class UploadController {
 
       await client.query('BEGIN');
 
-      // Check if upload exists and belongs to user
+      // Verify upload ownership
       const uploadResult = await client.query(
         'SELECT id, filename FROM csv_uploads WHERE id = $1 AND user_id = $2',
         [uploadId, userId]
@@ -878,7 +873,7 @@ class UploadController {
         });
       }
 
-      // Delete related transactions
+      // Delete transactions first due to foreign key constraint
       const deleteTransactionsResult = await client.query(
         'DELETE FROM transactions WHERE csv_upload_id = $1 AND user_id = $2',
         [uploadId, userId]

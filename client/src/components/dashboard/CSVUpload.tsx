@@ -1,14 +1,17 @@
-// client/src/components/dashboard/CSVUpload.tsx
+// CSV Upload component for processing bank statement files
+// Handles file validation, upload progress, and transaction processing
 import { useState } from 'react';
 import { Upload, CheckCircle, Sparkles, AlertCircle, FileText } from 'lucide-react';
 import { apiService, type UploadResponse } from '../../services/api';
 
 const CSVUpload = () => {
+  // Component state for file upload and processing
   const [csvFile, setCsvFile] = useState<File | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [uploadResult, setUploadResult] = useState<UploadResponse | null>(null);
   const [error, setError] = useState<string>('');
 
+  // Handle file selection with validation
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -31,16 +34,17 @@ const CSVUpload = () => {
     await processFile(file);
   };
 
+  // Process the uploaded file through the API
   const processFile = async (file: File) => {
     setIsProcessing(true);
     
     try {
-      console.log('📤 Starting CSV upload...', file.name);
+      console.log('Starting CSV upload...', file.name);
       
       const response = await apiService.uploadCSV(file);
       
       if (response.success && response.data) {
-        console.log('✅ Upload successful:', response.data);
+        console.log('Upload successful:', response.data);
         setUploadResult(response.data);
         
         // Trigger transaction refresh across the app
@@ -53,17 +57,18 @@ const CSVUpload = () => {
           newValue: Date.now().toString()
         }));
       } else {
-        console.error('❌ Upload failed:', response.error);
+        console.error('Upload failed:', response.error);
         setError(response.error || 'Upload failed');
       }
     } catch (error) {
-      console.error('❌ Upload error:', error);
+      console.error('Upload error:', error);
       setError('An unexpected error occurred during upload');
     } finally {
       setIsProcessing(false);
     }
   };
 
+  // Reset component to initial state
   const handleReset = () => {
     setCsvFile(null);
     setUploadResult(null);
@@ -71,6 +76,7 @@ const CSVUpload = () => {
     setIsProcessing(false);
   };
 
+  // Navigate to transactions view after successful upload
   const handleViewTransactions = () => {
     // Trigger a refresh of the parent component or navigate to transactions
     // You can emit an event or call a callback prop here
@@ -84,7 +90,7 @@ const CSVUpload = () => {
         Upload Bank Statement
       </h3>
 
-      {/* Upload Area */}
+      {/* Main upload area with conditional states */}
       <div className="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center">
         {!csvFile ? (
           /* Initial Upload State */
@@ -95,6 +101,7 @@ const CSVUpload = () => {
             <p className="text-gray-700 font-semibold mb-2">Drop your CSV file here</p>
             <p className="text-sm text-gray-500 mb-6">Credit card or bank statement (Max 5MB)</p>
             
+            {/* Hidden file input with label trigger */}
             <input
               type="file"
               accept=".csv,text/csv"
@@ -116,7 +123,7 @@ const CSVUpload = () => {
         ) : (
           /* File Selected State */
           <div>
-            {/* File Info */}
+            {/* Dynamic status icon based on current state */}
             <div className="flex items-center justify-center mb-4">
               <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto ${
                 isProcessing 
@@ -139,13 +146,13 @@ const CSVUpload = () => {
               </div>
             </div>
 
-            {/* File Name */}
+            {/* File information display */}
             <p className="text-gray-900 font-semibold text-lg mb-2">{csvFile.name}</p>
             <p className="text-sm text-gray-500 mb-4">
               Size: {(csvFile.size / 1024).toFixed(1)} KB
             </p>
 
-            {/* Status Messages */}
+            {/* Processing status message */}
             {isProcessing && (
               <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4 mb-4">
                 <p className="text-yellow-800 font-medium flex items-center justify-center">
@@ -155,6 +162,7 @@ const CSVUpload = () => {
               </div>
             )}
 
+            {/* Error message display */}
             {error && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-4">
                 <p className="text-red-600 font-medium flex items-center justify-center">
@@ -164,6 +172,7 @@ const CSVUpload = () => {
               </div>
             )}
 
+            {/* Success message with upload details */}
             {uploadResult && !isProcessing && (
               <div className="bg-green-50 border border-green-200 rounded-xl p-4 mb-4">
                 <p className="text-green-700 font-medium flex items-center justify-center mb-2">
@@ -182,7 +191,7 @@ const CSVUpload = () => {
               </div>
             )}
 
-            {/* Action Buttons */}
+            {/* Action buttons for next steps */}
             <div className="flex space-x-3 justify-center">
               <button
                 onClick={handleReset}
@@ -204,9 +213,9 @@ const CSVUpload = () => {
         )}
       </div>
 
-      {/* Instructions */}
+      {/* Help instructions for users */}
       <div className="mt-6 bg-blue-50 border border-blue-200 rounded-xl p-4">
-        <h4 className="font-semibold text-blue-900 mb-2">💡 CSV Upload Tips:</h4>
+        <h4 className="font-semibold text-blue-900 mb-2">CSV Upload Tips:</h4>
         <ul className="text-sm text-blue-800 space-y-1">
           <li>• Export your bank/credit card statement as CSV</li>
           <li>• Ensure columns include: Date, Description, Amount</li>
@@ -219,4 +228,4 @@ const CSVUpload = () => {
   );
 };
 
-export default CSVUpload; 
+export default CSVUpload;

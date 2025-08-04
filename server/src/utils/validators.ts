@@ -1,10 +1,10 @@
 // server/src/utils/validators.ts
 import Joi from 'joi';
 
-// UUID validation
+// UUID validation schema
 export const uuidSchema = Joi.string().uuid({ version: 'uuidv4' });
 
-// Date validation helpers
+// Date and time validation schemas
 export const dateSchema = Joi.date().iso();
 export const monthSchema = Joi.number().integer().min(1).max(12);
 export const yearSchema = Joi.number().integer().min(2020).max(2030);
@@ -13,10 +13,10 @@ export const yearSchema = Joi.number().integer().min(2020).max(2030);
 export const amountSchema = Joi.number().precision(2).min(0);
 export const signedAmountSchema = Joi.number().precision(2);
 
-// Email validation
+// Email validation schema
 export const emailSchema = Joi.string().email().lowercase();
 
-// Password validation with requirements
+// Password validation with complexity requirements
 export const passwordSchema = Joi.string()
   .min(8)
   .pattern(new RegExp('^(?=.*[a-z])(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#\$%\^&\*])'))
@@ -26,7 +26,7 @@ export const passwordSchema = Joi.string()
     'string.pattern.base': 'Password must contain at least one lowercase letter, one uppercase letter, one number, and one special character'
   });
 
-// Pagination validation
+// Pagination validation schema
 export const paginationSchema = {
   page: Joi.number().integer().min(1).default(1),
   limit: Joi.number().integer().min(1).max(100).default(50)
@@ -55,13 +55,14 @@ export const categorySchema = Joi.string().valid(
 // Transaction type validation
 export const transactionTypeSchema = Joi.string().valid('income', 'expense');
 
-// Custom validation functions
+// Validate that start date is before or equal to end date
 export const validateDateRange = (startDate: string, endDate: string): boolean => {
   const start = new Date(startDate);
   const end = new Date(endDate);
   return start <= end;
 };
 
+// Validate that month/year is not in the far future
 export const validateMonthYear = (month: number, year: number): boolean => {
   const currentDate = new Date();
   const inputDate = new Date(year, month - 1, 1);
@@ -69,7 +70,7 @@ export const validateMonthYear = (month: number, year: number): boolean => {
   return inputDate <= maxDate;
 };
 
-// Sanitization helpers
+// String sanitization helpers for user input
 export const sanitizeString = (str: string): string => {
   return str.trim().replace(/[<>]/g, '');
 };

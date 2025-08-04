@@ -2,16 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom styles for the MoneyWise app */
-
-/* Remove default margins and paddings */
+/* Global reset and box-sizing */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-/* Body styles */
+/* Base typography and background */
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
@@ -22,7 +20,7 @@ body {
   min-height: 100vh;
 }
 
-/* Remove input number spinners */
+/* Remove number input spinners */
 input[type="number"]::-webkit-outer-spin-button,
 input[type="number"]::-webkit-inner-spin-button {
   -webkit-appearance: none;
@@ -33,7 +31,7 @@ input[type="number"] {
   -moz-appearance: textfield;
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar styling */
 ::-webkit-scrollbar {
   width: 8px;
 }
@@ -52,14 +50,14 @@ input[type="number"] {
   background: #a8a8a8;
 }
 
-/* Focus styles for accessibility */
+/* Accessibility focus indicators */
 button:focus-visible,
 input:focus-visible {
   outline: 2px solid #3b82f6;
   outline-offset: 2px;
 }
 
-/* Loading animation */
+/* Loading spinner animation */
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -81,14 +79,14 @@ input:focus-visible {
   }
 }
 
-/* Custom gradient text */
+/* Gradient text utility */
 .bg-clip-text {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
 }
 
-/* Smooth transitions */
+/* Global smooth transitions */
 * {
   transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, opacity, box-shadow, transform, filter, backdrop-filter;
   transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);

@@ -16,6 +16,7 @@ interface TokenPair {
   refreshToken: string;
 }
 
+// JWT service for access/refresh token management and secure token generation
 class JWTService {
   private accessTokenSecret: Secret;
   private refreshTokenSecret: Secret;
@@ -29,7 +30,7 @@ class JWTService {
     this.refreshTokenExpiry = process.env.JWT_REFRESH_EXPIRY || '7d';
   }
 
-  // Generate access token
+  // Generate access token for API authentication
   generateAccessToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
     try {
       return jwt.sign(payload as JwtPayload, this.accessTokenSecret, {
@@ -43,7 +44,7 @@ class JWTService {
     }
   }
 
-  // Generate refresh token
+  // Generate refresh token for session renewal
   generateRefreshToken(payload: Omit<JWTPayload, 'iat' | 'exp'>): string {
     try {
       return jwt.sign(payload as JwtPayload, this.refreshTokenSecret, {
@@ -57,7 +58,7 @@ class JWTService {
     }
   }
 
-  // Generate both tokens
+  // Generate both access and refresh tokens
   generateTokenPair(payload: Omit<JWTPayload, 'iat' | 'exp'>): TokenPair {
     return {
       accessToken: this.generateAccessToken(payload),
@@ -65,7 +66,7 @@ class JWTService {
     };
   }
 
-  // Verify access token
+  // Validate access token and decode payload
   verifyAccessToken(token: string): JWTPayload {
     try {
       return jwt.verify(token, this.accessTokenSecret, {
@@ -83,7 +84,7 @@ class JWTService {
     }
   }
 
-  // Verify refresh token
+  // Validate refresh token and decode payload
   verifyRefreshToken(token: string): JWTPayload {
     try {
       return jwt.verify(token, this.refreshTokenSecret, {
@@ -101,12 +102,12 @@ class JWTService {
     }
   }
 
-  // Generate password reset token
+  // Generate secure random token for password reset
   generatePasswordResetToken(): string {
     return crypto.randomBytes(32).toString('hex');
   }
 
-  // Generate email verification token
+  // Generate secure random token for email verification
   generateEmailVerificationToken(): string {
     return crypto.randomBytes(32).toString('hex');
   }

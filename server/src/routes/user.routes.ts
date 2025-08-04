@@ -5,51 +5,32 @@ import { authenticateToken } from '../middleware/auth';
 
 const router = Router();
 
-console.log('👤 Loading REAL user routes with database integration...');
+console.log('Loading user routes with database integration...');
 
-// Apply authentication to all user routes
+// All user routes require authentication
 router.use(authenticateToken);
 
-// =============================================================================
-// USER DATA ENDPOINTS
-// =============================================================================
-
-// Get comprehensive user summary with financial stats
+// User analytics and summary endpoints
 router.get('/summary', userController.getUserSummary);
-
-// Get monthly financial breakdown by year
 router.get('/monthly-breakdown', userController.getMonthlyBreakdown);
-
-// Get detailed budget analysis for specific month/year
 router.get('/budget-analysis', userController.getBudgetAnalysis);
-
-// Get AI-generated financial insights and recommendations
 router.get('/insights', userController.getInsights);
 
-// =============================================================================
-// ACCOUNT MANAGEMENT
-// =============================================================================
-
-// Delete user account and all associated data (destructive action)
+// Account management (destructive action)
 router.delete('/account', userController.deleteAccount);
 
-// =============================================================================
-// TEST/DEBUG ROUTES (Development only)
-// =============================================================================
-
+// Development-only test/debug route
 if (process.env.NODE_ENV === 'development') {
-  // Test route to verify user routes are working
   router.get('/test', (req, res) => {
-    console.log('✅ User test route hit');
-    res.json({ 
+    res.json({
       success: true,
-      message: 'User routes are working with REAL controllers!',
+      message: 'User routes are working with real controllers',
       user: req.user,
       timestamp: new Date().toISOString()
     });
   });
 }
 
-console.log('✅ Real user routes configured with database controllers');
+console.log('Real user routes configured with database controllers');
 
 export { router as userRoutes };

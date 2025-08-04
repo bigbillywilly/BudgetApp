@@ -1,4 +1,11 @@
-﻿// client/src/types/api.types.ts
+﻿/**
+ * API Type Definitions for Budget Application
+ * 
+ * Centralized type definitions for all API responses, requests, and data structures
+ * used throughout the MoneyWise financial tracking application frontend.
+ */
+
+// Core API response structure for all backend endpoints
 export interface ApiResponse<T = any> {
   success: boolean;
   data?: T;
@@ -6,6 +13,7 @@ export interface ApiResponse<T = any> {
   error?: string;
 }
 
+// Pagination metadata for paginated list responses
 export interface PaginationInfo {
   currentPage: number;
   totalPages: number;

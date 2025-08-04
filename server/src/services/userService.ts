@@ -28,6 +28,7 @@ interface UserSummary {
   };
 }
 
+// User service for profile, analytics, and destructive actions
 class UserService {
   private pool: Pool;
 
@@ -35,24 +36,19 @@ class UserService {
     this.pool = db.getPool();
   }
 
-  // Get comprehensive user summary
+  // Get comprehensive user summary with stats and recent activity
   async getUserSummary(userId: string): Promise<UserSummary> {
     const client = await this.pool.connect();
-    
     try {
-      // Get user basic info
       const userResult = await client.query(
         'SELECT id, name, email, last_login, created_at FROM users WHERE id = $1',
         [userId]
       );
-
       if (userResult.rows.length === 0) {
         throw new Error('User not found');
       }
-
       const user = userResult.rows[0];
 
-      // Get user statistics
       const statsResult = await client.query(`
         SELECT 
           COUNT(DISTINCT md.id) as total_months,
@@ -77,13 +73,11 @@ class UserService {
         avg_expense: 0
       };
 
-      // Get recent activity dates
       const activityResult = await client.query(`
         SELECT 
           (SELECT MAX(transaction_date) FROM transactions WHERE user_id = $1) as last_transaction,
           (SELECT MAX(upload_date) FROM csv_uploads WHERE user_id = $1) as last_upload
       `, [userId]);
-
       const activity = activityResult.rows[0] || {};
 
       return {
@@ -116,11 +110,10 @@ class UserService {
     }
   }
 
-  // Get user's monthly financial breakdown
+  // Get user's monthly financial breakdown for a given year
   async getMonthlyBreakdown(userId: string, year?: number): Promise<any[]> {
     try {
       const targetYear = year || new Date().getFullYear();
-      
       const result = await this.pool.query(`
         SELECT 
           md.month,
@@ -162,22 +155,17 @@ class UserService {
     }
   }
 
-  // Delete user account and all associated data
+  // Delete user account and all associated data (cascading, transactional)
   async deleteUserAccount(userId: string): Promise<void> {
     const client = await this.pool.connect();
-    
     try {
       await client.query('BEGIN');
-
-      // Delete in order to respect foreign key constraints
       await client.query('DELETE FROM chat_messages WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM transactions WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM csv_uploads WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM monthly_data WHERE user_id = $1', [userId]);
       await client.query('DELETE FROM users WHERE id = $1', [userId]);
-
       await client.query('COMMIT');
-      
       logInfo('User account deleted', { userId });
     } catch (error) {
       await client.query('ROLLBACK');

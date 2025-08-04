@@ -1,11 +1,12 @@
-// server/src/controllers/transactionController.ts - REAL VERSION
+// server/src/controllers/transactionController.ts - UPDATED VERSION
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
 import { db } from '../database/connection';
 import { logInfo, logError } from '../utils/logger';
 
+// Transaction controller for CRUD operations and analytics
 export const transactionController = {
-  // GET /api/transactions
+  // Get paginated transactions with optional filtering
   async getTransactions(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -30,7 +31,7 @@ export const transactionController = {
       let queryParams: any[] = [userId];
       let paramCount = 2;
 
-      // Add filters
+      // Build dynamic WHERE clause based on filters
       if (category) {
         whereConditions.push(`category = $${paramCount}`);
         queryParams.push(category);
@@ -64,7 +65,7 @@ export const transactionController = {
         filters: { category, type, startDate, endDate } 
       });
 
-      // Get transactions
+      // Execute parallel queries for transactions and count
       const transactionsResult = await pool.query(`
         SELECT id, transaction_date, posted_date, card_no, description, category, amount, type, created_at, updated_at
         FROM transactions 
@@ -73,7 +74,6 @@ export const transactionController = {
         LIMIT $${paramCount} OFFSET $${paramCount + 1}
       `, [...queryParams, limit, offset]);
 
-      // Get total count
       const countResult = await pool.query(`
         SELECT COUNT(*) as total
         FROM transactions 
@@ -83,7 +83,7 @@ export const transactionController = {
       const total = parseInt(countResult.rows[0].total);
       const totalPages = Math.ceil(total / limit);
 
-      // Format transactions
+      // Transform database rows to API response format
       const transactions = transactionsResult.rows.map(row => ({
         id: row.id,
         transaction_date: row.transaction_date,
@@ -120,7 +120,7 @@ export const transactionController = {
     }
   },
 
-  // GET /api/transactions/:id
+  // Get single transaction by ID
   async getTransaction(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -175,7 +175,7 @@ export const transactionController = {
     }
   },
 
-  // POST /api/transactions
+  // Create new transaction with validation
   async createTransaction(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -198,7 +198,6 @@ export const transactionController = {
         });
       }
 
-      // Validate type
       if (!['income', 'expense'].includes(type)) {
         return res.status(400).json({
           success: false,
@@ -206,7 +205,6 @@ export const transactionController = {
         });
       }
 
-      // Validate amount
       const numAmount = parseFloat(amount);
       if (isNaN(numAmount) || numAmount <= 0) {
         return res.status(400).json({
@@ -254,7 +252,7 @@ export const transactionController = {
     }
   },
 
-  // PUT /api/transactions/:id
+  // Update transaction with partial field support
   async updateTransaction(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -270,6 +268,7 @@ export const transactionController = {
       const transactionId = req.params.id;
       const { description, category, amount, type } = req.body;
 
+      // Build dynamic update query based on provided fields
       const fields = [];
       const values = [];
       let paramCount = 1;
@@ -367,7 +366,7 @@ export const transactionController = {
     }
   },
 
-  // DELETE /api/transactions/:id
+  // Delete transaction by ID
   async deleteTransaction(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -411,7 +410,7 @@ export const transactionController = {
     }
   },
 
-  // GET /api/transactions/categories
+  // Get available transaction categories
   async getCategories(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -433,7 +432,7 @@ export const transactionController = {
     }
   },
 
-  // GET /api/transactions/analytics/spending-by-category
+  // Analyze spending breakdown by category for date range
   async getSpendingByCategory(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -472,7 +471,7 @@ export const transactionController = {
         ORDER BY total_amount DESC
       `, [userId, startDate, endDate]);
 
-      // Calculate total for percentages
+      // Calculate percentages based on total spending
       const totalSpent = result.rows.reduce((sum, row) => sum + parseFloat(row.total_amount), 0);
 
       const spendingData = result.rows.map(row => ({
@@ -500,7 +499,7 @@ export const transactionController = {
     }
   },
 
-  // GET /api/transactions/analytics/trends
+  // Generate monthly income/expense trends for visualization
   async getMonthlyTrends(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -531,7 +530,7 @@ export const transactionController = {
         ORDER BY year, month
       `, [userId]);
 
-      // Group by month/year
+      // Aggregate data by month/year for chart visualization
       const trendsMap: { [key: string]: any } = {};
 
       result.rows.forEach(row => {
@@ -554,7 +553,7 @@ export const transactionController = {
         trendsMap[key].transactionCount += parseInt(row.count);
       });
 
-      // Convert to array and calculate net savings
+      // Calculate savings and savings rate for each month
       const trends = Object.values(trendsMap).map((trend: any) => ({
         ...trend,
         savings: trend.income - trend.expenses,

@@ -1,7 +1,9 @@
-// client/src/context/BudgetContext.tsx
+// Budget context for managing monthly budget data across the application
+// Handles income, expenses, savings goals, and available spending calculations
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService } from '../services/api';
 
+// Monthly budget data structure with calculated fields
 interface MonthlyBudget {
   month: number;
   year: number;
@@ -12,6 +14,7 @@ interface MonthlyBudget {
   hasSetBudget: boolean;
 }
 
+// Budget context interface defining available methods and state
 interface BudgetContextType {
   budget: MonthlyBudget;
   isLoading: boolean;
@@ -24,16 +27,17 @@ interface BudgetContextType {
   calculateAvailableToSpend: () => number;
 }
 
-// Create context
+// Create budget context with undefined initial value for type safety
 const BudgetContext = createContext<BudgetContextType | undefined>(undefined);
 
-// Provider Props
+// Provider component props interface
 interface BudgetProviderProps {
   children: ReactNode;
 }
 
-// Budget Provider component
+// BudgetProvider component - manages budget state and provides context to children
 const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
+  // Initialize budget state with current month/year defaults
   const [budget, setBudget] = useState<MonthlyBudget>({
     month: new Date().getMonth() + 1,
     year: new Date().getFullYear(),
@@ -46,20 +50,20 @@ const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load budget data on mount
+  // Load budget data on component mount
   useEffect(() => {
     loadBudgetData();
   }, []);
 
-  // Calculate available to spend
+  // Calculate available spending amount based on budget formula
   const calculateAvailableToSpend = () => {
     return budget.income - budget.fixedExpenses - budget.savingsGoal;
   };
 
-  // Load budget data from API
+  // Load current month's budget data from API
   const loadBudgetData = async () => {
     try {
-      console.log('💰 Loading budget data...');
+      console.log('Loading budget data for current month...');
       setIsLoading(true);
       
       const response = await apiService.getCurrentMonthData();
@@ -79,30 +83,30 @@ const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           hasSetBudget,
         });
         
-        console.log('✅ Budget data loaded:', {
+        console.log('Budget data loaded successfully:', {
           income: data.income,
           availableToSpend,
           hasSetBudget
         });
       } else {
-        console.log('ℹ️ No budget data found, using defaults');
-        // Keep default state for new users
+        console.log('No existing budget found, using default values for new user');
+        // Keep default state for new users who haven't set up budget yet
       }
     } catch (error) {
-      console.error('❌ Failed to load budget data:', error);
+      console.error('Failed to load budget data:', error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Update budget data
+  // Update budget data with new income, expenses, and savings values
   const updateBudget = async (data: {
     income: number;
     fixedExpenses: number;
     savingsGoal: number;
   }): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('💰 Updating budget data:', data);
+      console.log('Updating budget with new data:', data);
       
       const response = await apiService.updateCurrentMonthData(data);
       
@@ -110,6 +114,7 @@ const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
         const updatedData = response.data;
         const availableToSpend = updatedData.income - updatedData.fixedExpenses - updatedData.savingsGoal;
         
+        // Update local state with calculated values
         setBudget({
           month: updatedData.month,
           year: updatedData.year,
@@ -120,28 +125,28 @@ const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
           hasSetBudget: true,
         });
         
-        console.log('✅ Budget updated successfully:', {
+        console.log('Budget updated successfully:', {
           income: updatedData.income,
           availableToSpend
         });
         
         return { success: true };
       } else {
-        console.error('❌ Budget update failed:', response.error);
+        console.error('Budget update failed:', response.error);
         return { success: false, error: response.error || 'Failed to update budget' };
       }
     } catch (error) {
-      console.error('❌ Budget update error:', error);
+      console.error('Budget update error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
-  // Refresh budget data (useful after uploads or changes)
+  // Refresh budget data from server (useful after transaction uploads or external changes)
   const refreshBudget = async () => {
     await loadBudgetData();
   };
 
-  // Context value
+  // Create context value object with current budget state and methods
   const contextValue: BudgetContextType = {
     budget,
     isLoading,
@@ -157,7 +162,7 @@ const BudgetProvider: React.FC<BudgetProviderProps> = ({ children }) => {
   );
 };
 
-// Custom hook to use budget context
+// Custom hook for accessing budget context with error checking
 export const useBudget = (): BudgetContextType => {
   const context = useContext(BudgetContext);
   
@@ -168,8 +173,8 @@ export const useBudget = (): BudgetContextType => {
   return context;
 };
 
-// Export the context itself (optional, for advanced use cases)
+// Export the context itself for advanced use cases
 export { BudgetContext };
 
-// Default export
+// Default export for Hot Module Replacement compatibility
 export default BudgetProvider;

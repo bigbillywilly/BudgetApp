@@ -6,8 +6,8 @@ export interface Transaction {
   postedDate: string;
   cardNumber: string;
   description: string;
-  originalCategory: string; // Bank's category
-  aiCategory: string; // Our AI-determined category
+  originalCategory: string;
+  aiCategory: string;
   amount: number;
   type: 'debit' | 'credit';
 }
@@ -31,11 +31,11 @@ export interface ProcessedCSV {
   insights: string[];
 }
 
+// CSV processing service for parsing, categorization, and analytics
 export class CSVProcessingService {
+  // AI-driven transaction categorization using keyword and pattern matching
   private aiCategorizeTransaction(description: string, originalCategory: string): string {
     const desc = description.toLowerCase();
-    
-    // Enhanced categorization with more specific patterns
     const categoryPatterns = {
       'Food & Dining': [
         'restaurant', 'cafe', 'coffee', 'food', 'dining', 'pizza', 'burger',
@@ -84,17 +84,13 @@ export class CSVProcessingService {
       ]
     };
 
-    // First, try to match against our AI patterns
     for (const [category, patterns] of Object.entries(categoryPatterns)) {
       if (patterns.some(pattern => desc.includes(pattern))) {
         return category;
       }
     }
 
-    // If no AI match, try to improve the bank's category
     const bankCategory = originalCategory.toLowerCase();
-    
-    // Map common bank categories to our categories
     const bankCategoryMap: Record<string, string> = {
       'restaurants': 'Food & Dining',
       'gas stations': 'Transportation',
@@ -110,14 +106,12 @@ export class CSVProcessingService {
       'fees': 'Financial Services'
     };
 
-    // Check if bank category maps to our categories
     for (const [bankCat, ourCat] of Object.entries(bankCategoryMap)) {
       if (bankCategory.includes(bankCat)) {
         return ourCat;
       }
     }
 
-    // Default to 'Other' if no match found
     return 'Other';
   }
 
@@ -130,16 +124,15 @@ export class CSVProcessingService {
     }
   }
 
+  // Generate insights based on transaction summary and category breakdowns
   private generateInsights(transactions: Transaction[], summary: ProcessedCSV['summary']): string[] {
     const insights: string[] = [];
-    
-    // Spending insights
+
     if (summary.totalDebits > 0) {
       const avgTransaction = summary.totalDebits / transactions.filter(t => t.type === 'debit').length;
       insights.push(`Your average transaction amount is $${avgTransaction.toFixed(2)}`);
     }
 
-    // Category insights
     const topSpendingCategory = Object.entries(
       transactions
         .filter(t => t.type === 'debit')
@@ -147,38 +140,36 @@ export class CSVProcessingService {
           acc[t.aiCategory] = (acc[t.aiCategory] || 0) + t.amount;
           return acc;
         }, {} as Record<string, number>)
-    ).sort(([,a], [,b]) => b - a)[0];
+    ).sort(([, a], [, b]) => b - a)[0];
 
     if (topSpendingCategory) {
       insights.push(`Your highest spending category is ${topSpendingCategory[0]} at $${topSpendingCategory[1].toFixed(2)}`);
     }
 
-    // Frequency insights
-    const foodTransactions = transactions.filter(t => 
+    const foodTransactions = transactions.filter(t =>
       t.aiCategory === 'Food & Dining' && t.type === 'debit'
     ).length;
-    
+
     if (foodTransactions > 0) {
       insights.push(`You made ${foodTransactions} dining transactions this period`);
     }
 
-    // Date range insight
     insights.push(`Transaction period: ${summary.dateRange.start} to ${summary.dateRange.end}`);
 
     return insights;
   }
 
+  // Parse CSV, categorize, summarize, and generate insights
   async processCSV(csvContent: string): Promise<ProcessedCSV> {
     return new Promise((resolve, reject) => {
       Papa.parse(csvContent, {
         header: true,
         skipEmptyLines: true,
         transformHeader: (header: string) => {
-          // Normalize header names to handle variations
           const normalized = header.trim().toLowerCase();
           const headerMap: Record<string, string> = {
             'transaction date': 'Transaction Date',
-            'posted date': 'Posted Date', 
+            'posted date': 'Posted Date',
             'card no.': 'Card No.',
             'card no': 'Card No.',
             'description': 'Description',
@@ -198,8 +189,7 @@ export class CSVProcessingService {
             results.data.forEach((row: any, index: number) => {
               const debitAmount = parseFloat(row.Debit || row.debit || 0);
               const creditAmount = parseFloat(row.Credit || row.credit || 0);
-              
-              // Skip rows with no monetary value
+
               if (debitAmount === 0 && creditAmount === 0) return;
 
               const transactionDate = this.formatDate(row['Transaction Date'] || row['transaction date'] || '');
@@ -241,19 +231,16 @@ export class CSVProcessingService {
               }
             });
 
-            // Calculate category breakdowns
             const aiCategoryBreakdown: Record<string, { total: number; count: number }> = {};
             const originalCategoryBreakdown: Record<string, { total: number; count: number }> = {};
 
             transactions.forEach(transaction => {
-              // AI category breakdown
               if (!aiCategoryBreakdown[transaction.aiCategory]) {
                 aiCategoryBreakdown[transaction.aiCategory] = { total: 0, count: 0 };
               }
               aiCategoryBreakdown[transaction.aiCategory].total += transaction.amount;
               aiCategoryBreakdown[transaction.aiCategory].count += 1;
 
-              // Original category breakdown
               if (!originalCategoryBreakdown[transaction.originalCategory]) {
                 originalCategoryBreakdown[transaction.originalCategory] = { total: 0, count: 0 };
               }
@@ -261,7 +248,6 @@ export class CSVProcessingService {
               originalCategoryBreakdown[transaction.originalCategory].count += 1;
             });
 
-            // Sort dates to get range
             dates.sort();
             const dateRange = {
               start: dates[0] || '',
@@ -298,7 +284,7 @@ export class CSVProcessingService {
     });
   }
 
-  // Helper method to get spending by category for charts
+  // Aggregate spending by AI category for charting
   getSpendingByCategory(transactions: Transaction[]): Record<string, number> {
     return transactions
       .filter(t => t.type === 'debit')
@@ -308,7 +294,7 @@ export class CSVProcessingService {
       }, {} as Record<string, number>);
   }
 
-  // Helper method to compare AI vs Bank categorization accuracy
+  // Compare AI vs Bank categorization accuracy
   getCategoryComparison(transactions: Transaction[]): {
     improved: number;
     unchanged: number;

@@ -29,8 +29,9 @@ interface UserSummary {
   };
 }
 
+// User profile and analytics controller
 export const userController = {
-  // GET /api/users/summary
+  // Get comprehensive user summary with statistics and recent activity
   async getUserSummary(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -60,7 +61,7 @@ export const userController = {
 
       const user = userResult.rows[0];
 
-      // Get comprehensive stats
+      // Aggregate financial statistics across all time
       const statsResult = await pool.query(`
         SELECT 
           COUNT(DISTINCT md.id) as total_months,
@@ -74,7 +75,7 @@ export const userController = {
         GROUP BY u.id
       `, [userId]);
 
-      // Get average monthly stats
+      // Calculate monthly averages for trends
       const monthlyAveragesResult = await pool.query(`
         SELECT 
           AVG(CASE WHEN t.type = 'income' THEN t.amount END) as avg_monthly_income,
@@ -95,7 +96,7 @@ export const userController = {
         avg_monthly_expenses: 0
       };
 
-      // Get recent activity
+      // Get recent activity timestamps
       const activityResult = await pool.query(`
         SELECT 
           (SELECT MAX(transaction_date) FROM transactions WHERE user_id = $1) as last_transaction,
@@ -140,7 +141,7 @@ export const userController = {
     }
   },
 
-  // GET /api/users/monthly-breakdown
+  // Get monthly budget vs actual spending breakdown
   async getMonthlyBreakdown(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -157,6 +158,7 @@ export const userController = {
       
       logInfo('Getting monthly breakdown', { userId, year });
 
+      // Join budget plans with actual transaction data
       const result = await pool.query(`
         SELECT 
           md.month,
@@ -165,7 +167,7 @@ export const userController = {
           md.fixed_expenses,
           md.savings_goal,
           COALESCE(SUM(CASE WHEN t.type = 'expense' THEN ABS(t.amount) ELSE 0 END), 0) as actual_expenses,
-          COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount ELSE 0 END), 0) as actual_income,
+          COALESCE(SUM(CASE WHEN t.type = 'income' THEN t.amount END), 0) as actual_income,
           COUNT(t.id) as transaction_count
         FROM monthly_data md
         LEFT JOIN transactions t ON md.user_id = t.user_id 
@@ -176,6 +178,7 @@ export const userController = {
         ORDER BY md.month
       `, [userId, year]);
 
+      // Calculate budget variance and metrics for each month
       const breakdown = result.rows.map(row => {
         const plannedIncome = parseFloat(row.income);
         const plannedExpenses = parseFloat(row.fixed_expenses);
@@ -214,7 +217,7 @@ export const userController = {
     }
   },
 
-  // GET /api/users/budget-analysis
+  // Analyze budget performance and category spending for specific month
   async getBudgetAnalysis(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -239,7 +242,7 @@ export const userController = {
 
       logInfo('Getting budget analysis', { userId, month, year });
 
-      // Get budget data
+      // Get budget data for specified month
       const budgetResult = await pool.query(
         'SELECT * FROM monthly_data WHERE user_id = $1 AND month = $2 AND year = $3',
         [userId, month, year]
@@ -255,7 +258,7 @@ export const userController = {
       const budget = budgetResult.rows[0];
       const availableToBudget = parseFloat(budget.income) - parseFloat(budget.fixed_expenses) - parseFloat(budget.savings_goal);
 
-      // Get actual spending by category
+      // Get actual spending by category for budget comparison
       const spendingResult = await pool.query(`
         SELECT 
           category,
@@ -272,9 +275,10 @@ export const userController = {
 
       const totalSpent = spendingResult.rows.reduce((sum, row) => sum + parseFloat(row.spent), 0);
 
+      // Analyze each category's budget performance
       const categories = spendingResult.rows.map(row => {
         const spent = parseFloat(row.spent);
-        const budgetedPerCategory = availableToBudget / spendingResult.rows.length; // Simple equal distribution
+        const budgetedPerCategory = availableToBudget / spendingResult.rows.length; // Equal distribution for simplicity
 
         let status: 'under' | 'over' | 'on-track';
         if (spent > budgetedPerCategory * 1.1) {
@@ -331,7 +335,7 @@ export const userController = {
     }
   },
 
-  // GET /api/users/insights
+  // Generate AI-like financial insights and recommendations
   async getInsights(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -350,12 +354,12 @@ export const userController = {
       const recommendations: string[] = [];
       const alerts: string[] = [];
 
-      // Get current month data
+      // Get current month data for analysis
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth() + 1;
       const currentYear = currentDate.getFullYear();
 
-      // Get current month transactions
+      // Aggregate current month transactions by category
       const currentMonthResult = await pool.query(`
         SELECT 
           type,
@@ -370,7 +374,7 @@ export const userController = {
         ORDER BY total DESC
       `, [userId, currentMonth, currentYear]);
 
-      // Get previous month for comparison
+      // Get previous month for month-over-month comparison
       const prevMonth = currentMonth === 1 ? 12 : currentMonth - 1;
       const prevYear = currentMonth === 1 ? currentYear - 1 : currentYear;
 
@@ -385,7 +389,7 @@ export const userController = {
         GROUP BY type
       `, [userId, prevMonth, prevYear]);
 
-      // Calculate current month totals
+      // Calculate month-over-month changes
       const currentIncome = currentMonthResult.rows
         .filter(row => row.type === 'income')
         .reduce((sum, row) => sum + parseFloat(row.total), 0);
@@ -394,7 +398,6 @@ export const userController = {
         .filter(row => row.type === 'expense')
         .reduce((sum, row) => sum + parseFloat(row.total), 0);
 
-      // Calculate previous month totals
       const prevIncome = previousMonthResult.rows
         .filter(row => row.type === 'income')
         .reduce((sum, row) => sum + parseFloat(row.total), 0);
@@ -403,7 +406,7 @@ export const userController = {
         .filter(row => row.type === 'expense')
         .reduce((sum, row) => sum + parseFloat(row.total), 0);
 
-      // Generate insights
+      // Generate income trend insights
       if (currentIncome > prevIncome) {
         const increase = currentIncome - prevIncome;
         insights.push(`Your income increased by ${increase.toFixed(2)} from last month`);
@@ -412,13 +415,14 @@ export const userController = {
         insights.push(`Your income decreased by ${decrease.toFixed(2)} from last month`);
       }
 
+      // Detect spending anomalies and trends
       if (currentExpenses > prevExpenses * 1.1) {
         const increase = currentExpenses - prevExpenses;
         alerts.push(`Your spending increased significantly by ${increase.toFixed(2)} this month`);
         recommendations.push('Review your recent expenses to identify areas where you can cut back');
       }
 
-      // Check savings rate
+      // Analyze savings rate and provide recommendations
       if (currentIncome > 0) {
         const savings = currentIncome - currentExpenses;
         const savingsRate = (savings / currentIncome) * 100;
@@ -433,7 +437,7 @@ export const userController = {
         }
       }
 
-      // Top spending category insights
+      // Analyze spending patterns by category
       const expenseCategories = currentMonthResult.rows.filter(row => row.type === 'expense');
       if (expenseCategories.length > 0) {
         const topCategory = expenseCategories[0];
@@ -447,7 +451,7 @@ export const userController = {
         }
       }
 
-      // Get budget data for more insights
+      // Check budget adherence if budget exists
       const budgetResult = await pool.query(
         'SELECT * FROM monthly_data WHERE user_id = $1 AND month = $2 AND year = $3',
         [userId, currentMonth, currentYear]
@@ -465,7 +469,7 @@ export const userController = {
         }
       }
 
-      // Add general recommendations if none exist
+      // Provide default recommendations if none generated
       if (recommendations.length === 0) {
         recommendations.push('Keep tracking your expenses to maintain good financial habits');
         recommendations.push('Consider setting up automatic savings to reach your financial goals');
@@ -490,7 +494,7 @@ export const userController = {
     }
   },
 
-  // DELETE /api/users/account
+  // Permanently delete user account and all associated data
   async deleteAccount(req: Request, res: Response) {
     const pool = db.getPool();
     const client = await pool.connect();

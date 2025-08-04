@@ -12,6 +12,7 @@ interface Migration {
   sql: string;
 }
 
+// Database migration runner with atomic execution and rollback support
 class MigrationRunner {
   private pool: Pool;
   private migrationsPath: string;
@@ -21,7 +22,7 @@ class MigrationRunner {
     this.migrationsPath = path.join(__dirname, 'migrations');
   }
 
-  // Create migrations table if it doesn't exist
+  // Initialize migrations tracking table for execution history
   private async createMigrationsTable(): Promise<void> {
     const query = `
       CREATE TABLE IF NOT EXISTS migrations (
@@ -34,21 +35,21 @@ class MigrationRunner {
 
     try {
       await this.pool.query(query);
-      logInfo('Migrations table created or already exists');
+      logInfo('Migrations table initialized');
     } catch (error) {
       logError('Failed to create migrations table', error);
       throw error;
     }
   }
 
-  // Get executed migrations
+  // Retrieve list of previously executed migrations from database
   private async getExecutedMigrations(): Promise<string[]> {
     try {
       const query = 'SELECT filename FROM migrations ORDER BY id';
       const result = await this.pool.query(query);
       return result.rows.map(row => row.filename);
     } catch (error) {
-      // If migrations table doesn't exist, return empty array
+      // Handle fresh database without migrations table
       if (error instanceof Error && error.message.includes('does not exist')) {
         return [];
       }
@@ -57,10 +58,9 @@ class MigrationRunner {
     }
   }
 
-  // Load migration files from disk
+  // Load and parse SQL migration files from filesystem
   private loadMigrationFiles(): Migration[] {
     try {
-      // Check if migrations directory exists
       if (!fs.existsSync(this.migrationsPath)) {
         logInfo(`Creating migrations directory: ${this.migrationsPath}`);
         fs.mkdirSync(this.migrationsPath, { recursive: true });
@@ -69,7 +69,7 @@ class MigrationRunner {
 
       const files = fs.readdirSync(this.migrationsPath)
         .filter(file => file.endsWith('.sql'))
-        .sort();
+        .sort(); // Ensure sequential execution by filename
 
       if (files.length === 0) {
         logInfo('No migration files found');
@@ -94,7 +94,7 @@ class MigrationRunner {
     }
   }
 
-  // Execute a single migration
+  // Execute single migration with transaction safety and tracking
   private async executeMigration(migration: Migration): Promise<void> {
     const client = await this.pool.connect();
     
@@ -102,10 +102,10 @@ class MigrationRunner {
       logInfo(`Executing migration: ${migration.filename}`);
       await client.query('BEGIN');
       
-      // Execute the migration SQL
+      // Execute migration SQL within transaction
       await client.query(migration.sql);
       
-      // Record the migration as executed
+      // Record successful execution for future runs
       await client.query(
         'INSERT INTO migrations (name, filename) VALUES ($1, $2)',
         [migration.name, migration.filename]
@@ -122,7 +122,7 @@ class MigrationRunner {
     }
   }
 
-  // Run all pending migrations
+  // Run all pending migrations in sequential order
   public async runMigrations(): Promise<void> {
     try {
       logInfo('Starting database migrations...');
@@ -132,6 +132,7 @@ class MigrationRunner {
       const executedMigrations = await this.getExecutedMigrations();
       const allMigrations = this.loadMigrationFiles();
       
+      // Filter out already executed migrations
       const pendingMigrations = allMigrations.filter(
         migration => !executedMigrations.includes(migration.filename)
       );
@@ -143,6 +144,7 @@ class MigrationRunner {
 
       logInfo(`Found ${pendingMigrations.length} pending migrations`);
       
+      // Execute migrations sequentially to maintain order dependencies
       for (const migration of pendingMigrations) {
         await this.executeMigration(migration);
       }
@@ -153,7 +155,49 @@ class MigrationRunner {
       throw error;
     }
   }
+
+  // Get migration status for debugging and monitoring
+  public async getMigrationStatus(): Promise<{
+    executed: string[];
+    pending: string[];
+    total: number;
+  }> {
+    try {
+      await this.createMigrationsTable();
+      
+      const executedMigrations = await this.getExecutedMigrations();
+      const allMigrations = this.loadMigrationFiles();
+      
+      const pendingMigrations = allMigrations
+        .filter(migration => !executedMigrations.includes(migration.filename))
+        .map(migration => migration.filename);
+
+      return {
+        executed: executedMigrations,
+        pending: pendingMigrations,
+        total: allMigrations.length
+      };
+    } catch (error) {
+      logError('Failed to get migration status', error);
+      throw error;
+    }
+  }
+
+  // Reset migrations table for testing environments only
+  public async resetMigrations(): Promise<void> {
+    if (process.env.NODE_ENV === 'production') {
+      throw new Error('Cannot reset migrations in production environment');
+    }
+
+    try {
+      await this.pool.query('DROP TABLE IF EXISTS migrations');
+      logInfo('Migrations table reset');
+    } catch (error) {
+      logError('Failed to reset migrations', error);
+      throw error;
+    }
+  }
 }
 
-// Create singleton instance
+// Export singleton instance
 export const migrationRunner = new MigrationRunner();

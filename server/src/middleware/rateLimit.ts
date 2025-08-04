@@ -6,7 +6,7 @@ import { getConfig } from '../config/environment';
 
 const config = getConfig();
 
-// Fix the createLimiter function
+// Factory for express-rate-limit with custom logging and response
 const createLimiter = (options: {
   windowMs: number;
   max: number;
@@ -29,18 +29,9 @@ const createLimiter = (options: {
     legacyHeaders: false,
     skipSuccessfulRequests: options.skipSuccessfulRequests || false,
     skipFailedRequests: options.skipFailedRequests || false,
-    
-    // REMOVE CUSTOM keyGenerator - let express-rate-limit handle IP automatically
-    // keyGenerator: options.keyGenerator || ((req: Request) => {
-    //   // Use user ID if authenticated, otherwise fall back to IP
-    //   const userId = req.user?.userId;
-    //   if (userId) return userId;
-    //   return req.ip || 'unknown';
-    // }),
-    
     handler: (req: Request, res: Response) => {
       const identifier = req.user?.userId || req.ip;
-      console.warn('Rate limit exceeded', {
+      logWarn('Rate limit exceeded', {
         identifier,
         endpoint: req.path,
         method: req.method,
@@ -62,15 +53,12 @@ const createLimiter = (options: {
   });
 };
 
-// =============================================================================
-// GENERAL API RATE LIMITING
-// =============================================================================
-
+// General API rate limiter for all endpoints
 export const generalLimiter = createLimiter({
-  windowMs: config.rateLimit.windowMs, // 15 minutes
-  max: config.rateLimit.maxRequests, // 100 requests per window
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.maxRequests,
   message: 'Too many requests from this client, please try again later.',
-  skipFailedRequests: true, // Don't count failed requests
+  skipFailedRequests: true,
   onLimitReached: (req, res) => {
     logWarn('General rate limit exceeded', {
       user: req.user?.userId,
@@ -80,15 +68,12 @@ export const generalLimiter = createLimiter({
   }
 });
 
-// =============================================================================
-// AUTHENTICATION RATE LIMITING (Stricter)
-// =============================================================================
-
+// Authentication endpoints limiter (prevents brute force)
 export const authLimiter = createLimiter({
-  windowMs: config.rateLimit.windowMs, // 15 minutes
-  max: config.rateLimit.authMaxRequests, // 5 auth attempts per window
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.authMaxRequests,
   message: 'Too many authentication attempts, please try again later.',
-  skipSuccessfulRequests: true, // Don't count successful logins
+  skipSuccessfulRequests: true,
   onLimitReached: (req, res) => {
     logWarn('Auth rate limit exceeded - potential brute force attack', {
       ip: req.ip,
@@ -99,10 +84,10 @@ export const authLimiter = createLimiter({
   }
 });
 
-// Stricter limiter for password reset attempts
+// Password reset limiter (protects against abuse)
 export const passwordResetLimiter = createLimiter({
-  windowMs: 60 * 60 * 1000, // 1 hour
-  max: 3, // Only 3 password reset attempts per hour
+  windowMs: 60 * 60 * 1000,
+  max: 3,
   message: 'Too many password reset attempts, please try again in an hour.',
   onLimitReached: (req, res) => {
     logWarn('Password reset rate limit exceeded', {
@@ -113,13 +98,10 @@ export const passwordResetLimiter = createLimiter({
   }
 });
 
-// =============================================================================
-// FILE UPLOAD RATE LIMITING
-// =============================================================================
-
+// File upload limiter (per user)
 export const uploadLimiter = createLimiter({
-  windowMs: config.rateLimit.windowMs, // 15 minutes
-  max: config.rateLimit.uploadMaxRequests, // 10 uploads per window
+  windowMs: config.rateLimit.windowMs,
+  max: config.rateLimit.uploadMaxRequests,
   message: 'Too many file uploads, please try again later.',
   onLimitReached: (req, res) => {
     logWarn('Upload rate limit exceeded', {
@@ -131,10 +113,10 @@ export const uploadLimiter = createLimiter({
   }
 });
 
-// Strict daily upload limiter
+// Daily upload limiter (strict daily cap)
 export const dailyUploadLimiter = createLimiter({
-  windowMs: 24 * 60 * 60 * 1000, // 24 hours
-  max: 50, // 50 uploads per day per user
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 50,
   message: 'Daily upload limit reached, please try again tomorrow.',
   onLimitReached: (req, res) => {
     logWarn('Daily upload limit exceeded', {
@@ -144,13 +126,10 @@ export const dailyUploadLimiter = createLimiter({
   }
 });
 
-// =============================================================================
-// AI/CHAT RATE LIMITING
-// =============================================================================
-
+// Chat/AI endpoints limiter (protects expensive operations)
 export const chatLimiter = createLimiter({
-  windowMs: config.rateLimit.windowMs / 15, // 1 minute
-  max: config.rateLimit.chatMaxRequests, // 20 messages per minute
+  windowMs: config.rateLimit.windowMs / 15,
+  max: config.rateLimit.chatMaxRequests,
   message: 'Too many chat requests, please slow down.',
   onLimitReached: (req, res) => {
     logWarn('Chat rate limit exceeded', {
@@ -161,10 +140,9 @@ export const chatLimiter = createLimiter({
   }
 });
 
-// Stricter limiter for AI insights (more expensive operations)
 export const aiInsightsLimiter = createLimiter({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 10, // 10 insights requests per 5 minutes
+  windowMs: 5 * 60 * 1000,
+  max: 10,
   message: 'Too many AI insights requests, please wait before requesting more.',
   onLimitReached: (req, res) => {
     logWarn('AI insights rate limit exceeded', {
@@ -174,21 +152,17 @@ export const aiInsightsLimiter = createLimiter({
   }
 });
 
-// =============================================================================
-// TRANSACTION RATE LIMITING
-// =============================================================================
-
+// Transaction endpoints limiter (protects DB from abuse)
 export const transactionLimiter = createLimiter({
-  windowMs: config.rateLimit.windowMs, // 15 minutes
-  max: 200, // 200 transaction operations per window
+  windowMs: config.rateLimit.windowMs,
+  max: 200,
   message: 'Too many transaction requests, please try again later.',
   skipFailedRequests: true
 });
 
-// Stricter limiter for transaction creation/updates
 export const transactionWriteLimiter = createLimiter({
-  windowMs: 5 * 60 * 1000, // 5 minutes
-  max: 50, // 50 write operations per 5 minutes
+  windowMs: 5 * 60 * 1000,
+  max: 50,
   message: 'Too many transaction modifications, please slow down.',
   onLimitReached: (req, res) => {
     logWarn('Transaction write rate limit exceeded', {
@@ -200,21 +174,17 @@ export const transactionWriteLimiter = createLimiter({
   }
 });
 
-// =============================================================================
-// SPECIALIZED RATE LIMITERS
-// =============================================================================
-
 // Email verification limiter
 export const emailVerificationLimiter = createLimiter({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5, // 5 verification attempts per window
+  windowMs: 15 * 60 * 1000,
+  max: 5,
   message: 'Too many email verification attempts, please try again later.'
 });
 
-// Account deletion limiter (very strict)
+// Account deletion limiter (very strict, security-sensitive)
 export const accountDeletionLimiter = createLimiter({
-  windowMs: 24 * 60 * 60 * 1000, // 24 hours
-  max: 1, // Only 1 deletion attempt per day
+  windowMs: 24 * 60 * 60 * 1000,
+  max: 1,
   message: 'Account deletion limit reached, please contact support if you need assistance.',
   onLimitReached: (req, res) => {
     logWarn('Account deletion rate limit exceeded', {
@@ -225,32 +195,25 @@ export const accountDeletionLimiter = createLimiter({
   }
 });
 
-// =============================================================================
-// ADVANCED RATE LIMITERS
-// =============================================================================
-
-// Progressive rate limiter (gets stricter with more requests)
+// Progressive rate limiter (dynamically adjusts based on activity)
 export const progressiveLimiter = (baseMax: number, windowMs: number) => {
   const store = new Map<string, { count: number; timestamp: number }>();
-  
   return (req: Request, res: Response, next: Function) => {
     const key = req.user?.userId || req.ip || 'unknown';
     const now = Date.now();
     const window = windowMs;
-    
-    // Clean old entries
+
+    // Clean up expired entries
     Array.from(store.entries()).forEach(([k, v]) => {
       if (now - v.timestamp > window) {
         store.delete(k);
       }
     });
-    
+
     const current = store.get(key) || { count: 0, timestamp: now };
-    
-    // Progressive multiplier based on recent activity
     const multiplier = Math.min(1 + (current.count / baseMax), 3);
     const adjustedMax = Math.floor(baseMax / multiplier);
-    
+
     if (current.count >= adjustedMax) {
       logWarn('Progressive rate limit exceeded', {
         key,
@@ -259,29 +222,24 @@ export const progressiveLimiter = (baseMax: number, windowMs: number) => {
         multiplier,
         endpoint: req.path
       });
-      
+
       return res.status(429).json({
         success: false,
         error: 'Request limit exceeded. Rate limit increases with activity.',
         retryAfter: Math.ceil(windowMs / 1000)
       });
     }
-    
-    // Update counter
+
     store.set(key, {
       count: current.count + 1,
       timestamp: current.timestamp || now
     });
-    
+
     next();
   };
 };
 
-// =============================================================================
-// UTILITY FUNCTIONS
-// =============================================================================
-
-// Create custom rate limiter with specific options
+// Utility: create custom limiter with options
 export const createCustomLimiter = (options: {
   windowMs: number;
   max: number;
@@ -292,22 +250,19 @@ export const createCustomLimiter = (options: {
   return createLimiter(options);
 };
 
-// Get rate limit status for debugging
+// Utility: get rate limit status headers for debugging
 export const getRateLimitStatus = (req: Request) => {
-  const rateLimitHeaders = {
+  return {
     limit: req.get('RateLimit-Limit'),
     remaining: req.get('RateLimit-Remaining'),
     reset: req.get('RateLimit-Reset'),
     policy: req.get('RateLimit-Policy')
   };
-  
-  return rateLimitHeaders;
 };
 
-// Rate limiter health check
+// Utility: health check endpoint for rate limiter
 export const rateLimiterHealthCheck = (req: Request, res: Response) => {
   const status = getRateLimitStatus(req);
-  
   res.json({
     success: true,
     message: 'Rate limiter is functioning',
@@ -316,32 +271,26 @@ export const rateLimiterHealthCheck = (req: Request, res: Response) => {
   });
 };
 
-// =============================================================================
-// COMBINED RATE LIMITERS FOR ROUTES
-// =============================================================================
-
-// Combine multiple rate limiters
+// Combine multiple rate limiters for stricter protection
 export const combineRateLimiters = (...limiters: any[]) => {
   return (req: Request, res: Response, next: Function) => {
     let currentIndex = 0;
-    
     const runNextLimiter = () => {
       if (currentIndex >= limiters.length) {
         return next();
       }
-      
       const limiter = limiters[currentIndex];
       currentIndex++;
-      
       limiter(req, res, (err?: any) => {
+        if (err) return next(err);
+        runNextLimiter();
       });
     };
-    
     runNextLimiter();
   };
 };
 
-// Export preset combinations
+// Preset combinations for high-risk endpoints
 export const strictAuthLimiter = combineRateLimiters(
   generalLimiter,
   authLimiter

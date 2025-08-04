@@ -1,85 +1,85 @@
-// client/src/context/AuthContext.tsx
+// Authentication context for managing user authentication state across the application
+// Handles login, logout, registration, and token validation with persistent storage
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { apiService } from '../services/api';
 
-// Types
+// User data structure from authentication API
 interface User {
   id: string;
   email: string;
   name: string;
-  emailVerified?: boolean; // Made optional to match API response
+  emailVerified?: boolean; // Optional field for email verification status
 }
 
+// Authentication context interface defining available methods and state
 interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
-  user: User | null; // Changed from string to User object
+  user: User | null;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
   logout: () => void;
   register: (email: string, name: string, password: string) => Promise<{ success: boolean; error?: string }>;
 }
 
-// Create context with proper typing
+// Create authentication context with undefined initial value for type safety
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Provider Props
+// Provider component props interface
 interface AuthProviderProps {
   children: ReactNode;
 }
 
-// AuthProvider component - MUST be default export for HMR
+// AuthProvider component - manages authentication state and provides context to children
 const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [user, setUser] = useState<User | null>(null);
 
-  // Check authentication status on mount
+  // Check existing authentication on component mount
   useEffect(() => {
-    console.log('🔐 Checking authentication status...');
+    console.log('Checking authentication status...');
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
     
     if (!token) {
-      console.log('❌ No access token found');
+      console.log('No access token found');
       setIsLoading(false);
       return;
     }
 
-    console.log('✅ Access token found, validating with server...');
-    
-    // Validate token with server
+    console.log('Access token found, validating with server...');
     validateTokenWithServer();
   }, []);
 
-  // Validate token with server
+  // Validate stored token with backend API
   const validateTokenWithServer = async () => {
     try {
       const response = await apiService.getUserProfile();
       
       if (response.success && response.data?.user) {
         const userData = response.data.user;
-        // Ensure emailVerified has a default value
+        // Ensure required fields have default values for type safety
         const userWithDefaults: User = {
           id: userData.id,
           email: userData.email,
           name: userData.name,
-          emailVerified: userData.emailVerified ?? false, // Default to false if undefined
+          emailVerified: userData.emailVerified ?? false,
         };
         setUser(userWithDefaults);
         setIsAuthenticated(true);
-        console.log('✅ Token validated, user authenticated:', userWithDefaults.email);
+        console.log('Token validated, user authenticated:', userWithDefaults.email);
       } else {
-        console.log('❌ Token validation failed:', response.error);
+        console.log('Token validation failed:', response.error);
         clearAuthData();
       }
     } catch (error) {
-      console.error('❌ Token validation error:', error);
+      console.error('Token validation error:', error);
       clearAuthData();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Clear authentication data
+  // Clear all authentication data from localStorage and state
   const clearAuthData = () => {
     localStorage.removeItem('accessToken');
     localStorage.removeItem('refreshToken');
@@ -88,81 +88,81 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     setIsAuthenticated(false);
   };
 
-  // Login function - FIXED return type
+  // Authenticate user with email and password
   const login = async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('🔐 Attempting login for:', email);
+      console.log('Attempting login for:', email);
       
       const response = await apiService.login(email, password);
 
       if (response.success && response.data) {
         const { user: userData, tokens } = response.data;
 
-        // Store tokens
+        // Store authentication tokens in localStorage for persistence
         localStorage.setItem('accessToken', tokens.accessToken);
         localStorage.setItem('refreshToken', tokens.refreshToken);
         localStorage.setItem('token', tokens.accessToken); // Backward compatibility
 
-        // Ensure user data has proper defaults
+        // Ensure user data has proper defaults for type safety
         const userWithDefaults: User = {
           id: userData.id,
           email: userData.email,
           name: userData.name,
-          emailVerified: userData.emailVerified ?? false, // Default to false if undefined
+          emailVerified: userData.emailVerified ?? false,
         };
 
-        // Update state
+        // Update authentication state
         setUser(userWithDefaults);
         setIsAuthenticated(true);
 
-        console.log('✅ Login successful:', userWithDefaults.email);
+        console.log('Login successful:', userWithDefaults.email);
         return { success: true };
       } else {
-        console.error('❌ Login failed:', response.error);
+        console.error('Login failed:', response.error);
         return { success: false, error: response.error || 'Login failed' };
       }
     } catch (error) {
-      console.error('❌ Login error:', error);
+      console.error('Login error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
-  // Register function - FIXED return type
+  // Register new user account with email, name, and password
   const register = async (email: string, name: string, password: string): Promise<{ success: boolean; error?: string }> => {
     try {
-      console.log('📝 Attempting registration for:', email);
+      console.log('Attempting registration for:', email);
       
       const response = await apiService.register(email, name, password);
 
       if (response.success) {
-        console.log('✅ Registration successful:', email);
+        console.log('Registration successful:', email);
         return { success: true };
       } else {
-        console.error('❌ Registration failed:', response.error);
+        console.error('Registration failed:', response.error);
         return { success: false, error: response.error || 'Registration failed' };
       }
     } catch (error) {
-      console.error('❌ Registration error:', error);
+      console.error('Registration error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
-  // Logout function
+  // Log out current user and clear authentication data
   const logout = (): void => {
-    console.log('🚪 Logging out user:', user?.email);
+    console.log('Logging out user:', user?.email);
     
-    // Call API logout (optional, but good practice)
+    // Attempt to notify backend of logout (optional but recommended)
     apiService.logout().catch(error => {
-      console.warn('⚠️ API logout failed:', error);
+      console.warn('API logout failed:', error);
     });
     
-    // Clear local data
+    // Clear local authentication data
     clearAuthData();
     
-    console.log('✅ Logout successful');
+    console.log('Logout successful');
   };
 
-  // Context value
+  // Create context value object with current authentication state and methods
   const contextValue: AuthContextType = {
     isAuthenticated,
     isLoading,
@@ -179,7 +179,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   );
 };
 
-// Custom hook to use auth context
+// Custom hook for accessing authentication context with error checking
 export const useAuth = (): AuthContextType => {
   const context = useContext(AuthContext);
   
@@ -190,8 +190,8 @@ export const useAuth = (): AuthContextType => {
   return context;
 };
 
-// Export the context itself (optional, for advanced use cases)
+// Export the context itself for advanced use cases
 export { AuthContext };
 
-// IMPORTANT: Default export for HMR compatibility
+// Default export for Hot Module Replacement compatibility
 export default AuthProvider;

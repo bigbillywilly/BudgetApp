@@ -37,6 +37,7 @@ export interface CategoryUsage {
   percentage: number;
 }
 
+// Category service for CRUD, analytics, and auto-categorization
 class CategoryService {
   private pool: Pool;
 
@@ -44,7 +45,6 @@ class CategoryService {
     this.pool = db.getPool();
   }
 
-  // Get all available categories
   async getAllCategories(): Promise<TransactionCategory[]> {
     try {
       const result = await this.pool.query(`
@@ -52,7 +52,6 @@ class CategoryService {
         FROM transaction_categories
         ORDER BY is_default DESC, name ASC
       `);
-
       return result.rows;
     } catch (error) {
       logError('Failed to get all categories', error);
@@ -60,7 +59,6 @@ class CategoryService {
     }
   }
 
-  // Get default categories only
   async getDefaultCategories(): Promise<TransactionCategory[]> {
     try {
       const result = await this.pool.query(`
@@ -69,7 +67,6 @@ class CategoryService {
         WHERE is_default = true
         ORDER BY name ASC
       `);
-
       return result.rows;
     } catch (error) {
       logError('Failed to get default categories', error);
@@ -77,14 +74,12 @@ class CategoryService {
     }
   }
 
-  // Get category by ID
   async getCategoryById(categoryId: string): Promise<TransactionCategory | null> {
     try {
       const result = await this.pool.query(
         'SELECT id, name, description, is_default, created_at FROM transaction_categories WHERE id = $1',
         [categoryId]
       );
-
       return result.rows[0] || null;
     } catch (error) {
       logError('Failed to get category by ID', error);
@@ -92,14 +87,12 @@ class CategoryService {
     }
   }
 
-  // Get category by name
   async getCategoryByName(name: string): Promise<TransactionCategory | null> {
     try {
       const result = await this.pool.query(
         'SELECT id, name, description, is_default, created_at FROM transaction_categories WHERE LOWER(name) = LOWER($1)',
         [name]
       );
-
       return result.rows[0] || null;
     } catch (error) {
       logError('Failed to get category by name', error);
@@ -107,15 +100,12 @@ class CategoryService {
     }
   }
 
-  // Create new category
   async createCategory(categoryData: CreateCategoryData): Promise<TransactionCategory> {
     try {
-      // Check if category already exists
       const existing = await this.getCategoryByName(categoryData.name);
       if (existing) {
         throw new Error('Category with this name already exists');
       }
-
       const result = await this.pool.query(`
         INSERT INTO transaction_categories (name, description, is_default)
         VALUES ($1, $2, $3)
@@ -125,10 +115,8 @@ class CategoryService {
         categoryData.description?.trim() || null,
         categoryData.is_default || false
       ]);
-
       const category = result.rows[0];
       logInfo('Category created', { categoryId: category.id, name: category.name });
-
       return category;
     } catch (error) {
       logError('Failed to create category', error);
@@ -136,7 +124,6 @@ class CategoryService {
     }
   }
 
-  // Update category
   async updateCategory(categoryId: string, updateData: UpdateCategoryData): Promise<TransactionCategory> {
     try {
       const fields = [];
@@ -144,12 +131,10 @@ class CategoryService {
       let paramCount = 1;
 
       if (updateData.name) {
-        // Check if new name conflicts with existing category
         const existing = await this.getCategoryByName(updateData.name);
         if (existing && existing.id !== categoryId) {
           throw new Error('Category with this name already exists');
         }
-
         fields.push(`name = $${paramCount}`);
         values.push(updateData.name.trim());
         paramCount++;
@@ -180,7 +165,6 @@ class CategoryService {
 
       const category = result.rows[0];
       logInfo('Category updated', { categoryId, name: category.name });
-
       return category;
     } catch (error) {
       logError('Failed to update category', error);
@@ -188,61 +172,43 @@ class CategoryService {
     }
   }
 
-  // Delete category
   async deleteCategory(categoryId: string, replacementCategoryId?: string): Promise<void> {
     const client = await this.pool.connect();
-
     try {
       await client.query('BEGIN');
-
-      // Check if category exists
       const categoryResult = await client.query(
         'SELECT id, name, is_default FROM transaction_categories WHERE id = $1',
         [categoryId]
       );
-
       if (categoryResult.rows.length === 0) {
         throw new Error('Category not found');
       }
-
       const category = categoryResult.rows[0];
-
-      // Prevent deletion of default categories without replacement
       if (category.is_default && !replacementCategoryId) {
         throw new Error('Cannot delete default category without providing a replacement category');
       }
-
-      // Check how many transactions use this category
       const transactionCount = await client.query(
         'SELECT COUNT(*) as count FROM transactions WHERE category = $1',
         [category.name]
       );
-
       const count = parseInt(transactionCount.rows[0].count);
 
       if (count > 0) {
         if (!replacementCategoryId) {
           throw new Error(`Cannot delete category '${category.name}' because it is used by ${count} transactions. Provide a replacement category.`);
         }
-
-        // Get replacement category
         const replacementResult = await client.query(
           'SELECT id, name FROM transaction_categories WHERE id = $1',
           [replacementCategoryId]
         );
-
         if (replacementResult.rows.length === 0) {
           throw new Error('Replacement category not found');
         }
-
         const replacementCategory = replacementResult.rows[0];
-
-        // Update all transactions to use replacement category
         await client.query(
           'UPDATE transactions SET category = $1 WHERE category = $2',
           [replacementCategory.name, category.name]
         );
-
         logInfo('Updated transactions with replacement category', {
           oldCategory: category.name,
           newCategory: replacementCategory.name,
@@ -250,17 +216,13 @@ class CategoryService {
         });
       }
 
-      // Delete the category
       await client.query('DELETE FROM transaction_categories WHERE id = $1', [categoryId]);
-
       await client.query('COMMIT');
-
       logInfo('Category deleted', { 
         categoryId, 
         categoryName: category.name, 
         affectedTransactions: count 
       });
-
     } catch (error) {
       await client.query('ROLLBACK');
       logError('Failed to delete category', error);
@@ -270,7 +232,6 @@ class CategoryService {
     }
   }
 
-  // Get category usage statistics for a user
   async getCategoryStats(userId: string, startDate?: Date, endDate?: Date): Promise<CategoryStats[]> {
     try {
       let query = `
@@ -283,29 +244,24 @@ class CategoryService {
         FROM transactions t
         WHERE t.user_id = $1
       `;
-      
       const params = [userId];
       let paramCount = 2;
 
       if (startDate) {
         query += ` AND t.transaction_date >= $${paramCount}`;
-        params.push(startDate.toISOString().slice(0, 10)); // 'YYYY-MM-DD'
+        params.push(startDate.toISOString().slice(0, 10));
         paramCount++;
       }
-
       if (endDate) {
         query += ` AND t.transaction_date <= $${paramCount}`;
-        params.push(endDate.toISOString().slice(0, 10)); // 'YYYY-MM-DD'
+        params.push(endDate.toISOString().slice(0, 10));
         paramCount++;
       }
-
       query += `
         GROUP BY t.category
         ORDER BY total_amount DESC
       `;
-
       const result = await this.pool.query(query, params);
-
       return result.rows.map(row => ({
         categoryName: row.category_name,
         transactionCount: parseInt(row.transaction_count),
@@ -319,14 +275,10 @@ class CategoryService {
     }
   }
 
-  // Get category usage breakdown for a user
   async getCategoryUsage(userId: string, startDate?: Date, endDate?: Date): Promise<CategoryUsage[]> {
     try {
       const stats = await this.getCategoryStats(userId, startDate, endDate);
-      
       const totalAmount = stats.reduce((sum, stat) => sum + stat.totalAmount, 0);
-      const totalCount = stats.reduce((sum, stat) => sum + stat.transactionCount, 0);
-
       return stats.map(stat => ({
         category: stat.categoryName,
         count: stat.transactionCount,
@@ -339,15 +291,11 @@ class CategoryService {
     }
   }
 
-  // Auto-categorize transaction based on description
+  // Simple keyword-based auto-categorization for transactions
   async categorizeTransaction(description: string, amount?: number): Promise<string> {
     try {
       const desc = description.toLowerCase();
-      
-      // Get all categories for more sophisticated matching
       const categories = await this.getAllCategories();
-      
-      // Enhanced categorization rules
       const categoryRules = {
         'Food & Dining': [
           'restaurant', 'food', 'pizza', 'burger', 'coffee', 'cafe', 'diner',
@@ -388,7 +336,6 @@ class CategoryService {
         ]
       };
 
-      // Check for income indicators
       if (amount && amount > 0) {
         const incomeKeywords = ['salary', 'paycheck', 'deposit', 'income', 'pay', 'wage'];
         if (incomeKeywords.some(keyword => desc.includes(keyword))) {
@@ -396,14 +343,12 @@ class CategoryService {
         }
       }
 
-      // Find best matching category
       for (const [categoryName, keywords] of Object.entries(categoryRules)) {
         if (keywords.some(keyword => desc.includes(keyword))) {
           return categoryName;
         }
       }
 
-      // Default category
       return 'Other';
     } catch (error) {
       logError('Failed to categorize transaction', error);
@@ -411,7 +356,6 @@ class CategoryService {
     }
   }
 
-  // Get most used categories for a user
   async getMostUsedCategories(userId: string, limit: number = 10): Promise<CategoryUsage[]> {
     try {
       const result = await this.pool.query(`
@@ -430,7 +374,6 @@ class CategoryService {
         'SELECT COUNT(*) as total FROM transactions WHERE user_id = $1',
         [userId]
       );
-
       const total = parseInt(totalTransactions.rows[0].total);
 
       return result.rows.map(row => ({
@@ -445,17 +388,14 @@ class CategoryService {
     }
   }
 
-  // Suggest categories based on user's transaction patterns
   async suggestCategoriesForUser(userId: string): Promise<string[]> {
     try {
       const mostUsed = await this.getMostUsedCategories(userId, 5);
       const allCategories = await this.getDefaultCategories();
-      
       const usedCategoryNames = mostUsed.map(c => c.category);
       const unusedCategories = allCategories
         .filter(cat => !usedCategoryNames.includes(cat.name))
         .map(cat => cat.name);
-
       return [...usedCategoryNames, ...unusedCategories.slice(0, 5)];
     } catch (error) {
       logError('Failed to suggest categories', error);
@@ -463,28 +403,22 @@ class CategoryService {
     }
   }
 
-  // Merge categories (useful for cleanup)
+  // Merge two categories and update all related transactions
   async mergeCategories(sourceCategoryId: string, targetCategoryId: string): Promise<void> {
     const client = await this.pool.connect();
-
     try {
       await client.query('BEGIN');
-
-      // Get both categories
       const sourceResult = await client.query(
         'SELECT id, name FROM transaction_categories WHERE id = $1',
         [sourceCategoryId]
       );
-
       const targetResult = await client.query(
         'SELECT id, name FROM transaction_categories WHERE id = $1',
         [targetCategoryId]
       );
-
       if (sourceResult.rows.length === 0 || targetResult.rows.length === 0) {
         throw new Error('One or both categories not found');
       }
-
       const sourceCategory = sourceResult.rows[0];
       const targetCategory = targetResult.rows[0];
 
@@ -496,7 +430,6 @@ class CategoryService {
 
       // Delete the source category
       await client.query('DELETE FROM transaction_categories WHERE id = $1', [sourceCategoryId]);
-
       await client.query('COMMIT');
 
       logInfo('Categories merged', {

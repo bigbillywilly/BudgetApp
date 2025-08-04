@@ -1,4 +1,4 @@
-// server/src/controllers/authController.ts - REAL VERSION
+// server/src/controllers/authController.ts - UPDATED VERSION
 import { Request, Response } from 'express';
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,6 +7,7 @@ import { jwtService } from '../utils/jwt';
 import { encryptionService } from '../utils/encryption';
 import { logInfo, logError, logWarn } from '../utils/logger';
 
+// User authentication response interfaces
 export interface LoginResponse {
   user: {
     id: string;
@@ -32,8 +33,9 @@ export interface RegisterResponse {
   message: string;
 }
 
+// Authentication controller with user management endpoints
 export const authController = {
-  // Register new user
+  // Register new user with validation and transaction safety
   async register(req: Request, res: Response) {
     const pool = db.getPool();
     const client = await pool.connect();
@@ -45,7 +47,7 @@ export const authController = {
       
       logInfo('Registration attempt', { email, name });
 
-      // Validate input
+      // Input validation
       if (!email || !name || !password) {
         return res.status(400).json({
           success: false,
@@ -53,7 +55,7 @@ export const authController = {
         });
       }
 
-      // Validate email format
+      // Email format validation
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({
@@ -62,7 +64,7 @@ export const authController = {
         });
       }
 
-      // Validate password strength
+      // Password strength validation
       if (password.length < 6) {
         return res.status(400).json({
           success: false,
@@ -70,7 +72,7 @@ export const authController = {
         });
       }
 
-      // Check if user already exists
+      // Check for existing user
       const existingUser = await client.query(
         'SELECT id FROM users WHERE email = $1',
         [email.toLowerCase()]
@@ -84,13 +86,11 @@ export const authController = {
         });
       }
 
-      // Hash password
+      // Hash password and generate verification token
       const passwordHash = await encryptionService.hashPassword(password);
-      
-      // Generate email verification token
       const emailVerificationToken = jwtService.generateEmailVerificationToken();
 
-      // Create user
+      // Create user with generated UUID
       const userId = uuidv4();
       const result = await client.query(`
         INSERT INTO users (id, email, name, password_hash, email_verification_token, email_verified)
@@ -129,7 +129,7 @@ export const authController = {
     }
   },
 
-  // Login user
+  // Authenticate user with email and password
   async login(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -138,7 +138,7 @@ export const authController = {
       
       logInfo('Login attempt', { email });
 
-      // Validate input
+      // Input validation
       if (!email || !password) {
         return res.status(400).json({
           success: false,
@@ -146,7 +146,7 @@ export const authController = {
         });
       }
 
-      // Get user by email
+      // Fetch user by email
       const result = await pool.query(
         'SELECT * FROM users WHERE email = $1',
         [email.toLowerCase()]
@@ -162,7 +162,7 @@ export const authController = {
 
       const user = result.rows[0];
 
-      // Check password
+      // Verify password hash
       const isPasswordValid = await encryptionService.comparePassword(password, user.password_hash);
       
       if (!isPasswordValid) {
@@ -173,13 +173,13 @@ export const authController = {
         });
       }
 
-      // Update last login
+      // Update last login timestamp
       await pool.query(
         'UPDATE users SET last_login = CURRENT_TIMESTAMP WHERE id = $1',
         [user.id]
       );
 
-      // Generate tokens
+      // Generate JWT token pair
       const tokens = jwtService.generateTokenPair({
         userId: user.id,
         email: user.email
@@ -210,7 +210,7 @@ export const authController = {
     }
   },
 
-  // Refresh access token
+  // Generate new access token using valid refresh token
   async refreshToken(req: Request, res: Response) {
     try {
       const { refreshToken } = req.body;
@@ -222,10 +222,10 @@ export const authController = {
         });
       }
 
-      // Verify refresh token
+      // Verify and decode refresh token
       const decoded = jwtService.verifyRefreshToken(refreshToken);
       
-      // Check if user still exists
+      // Validate user still exists
       const pool = db.getPool();
       const result = await pool.query(
         'SELECT id, email FROM users WHERE id = $1',
@@ -260,7 +260,7 @@ export const authController = {
     }
   },
 
-  // Verify email
+  // Verify user email address with token
   async verifyEmail(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -274,6 +274,7 @@ export const authController = {
         });
       }
 
+      // Update user as verified and clear token
       const result = await pool.query(
         'UPDATE users SET email_verified = true, email_verification_token = NULL WHERE email_verification_token = $1 RETURNING id, email',
         [token]
@@ -302,7 +303,7 @@ export const authController = {
     }
   },
 
-  // Request password reset
+  // Generate password reset token for email
   async forgotPassword(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -316,15 +317,16 @@ export const authController = {
         });
       }
 
+      // Generate reset token with 1-hour expiry
       const token = jwtService.generatePasswordResetToken();
-      const expires = new Date(Date.now() + 3600000); // 1 hour from now
+      const expires = new Date(Date.now() + 3600000);
 
       const result = await pool.query(
         'UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE email = $3 RETURNING id',
         [token, expires, email.toLowerCase()]
       );
 
-      // Always return success to prevent email enumeration
+      // Always return success to prevent email enumeration attacks
       res.json({
         success: true,
         message: 'If an account with that email exists, a password reset link has been sent'
@@ -345,7 +347,7 @@ export const authController = {
     }
   },
 
-  // Reset password
+  // Reset password using valid reset token
   async resetPassword(req: Request, res: Response) {
     const pool = db.getPool();
     const client = await pool.connect();
@@ -362,7 +364,7 @@ export const authController = {
         });
       }
 
-      // Check if token is valid and not expired
+      // Validate token and check expiry
       const result = await client.query(
         'SELECT id, email FROM users WHERE password_reset_token = $1 AND password_reset_expires > NOW()',
         [token]
@@ -378,10 +380,9 @@ export const authController = {
 
       const user = result.rows[0];
 
-      // Hash new password
+      // Hash new password and clear reset tokens
       const passwordHash = await encryptionService.hashPassword(password);
 
-      // Update password and clear reset token
       await client.query(
         'UPDATE users SET password_hash = $1, password_reset_token = NULL, password_reset_expires = NULL WHERE id = $2',
         [passwordHash, user.id]
@@ -407,7 +408,7 @@ export const authController = {
     }
   },
 
-  // Get user profile
+  // Get authenticated user profile data
   async getProfile(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -458,7 +459,7 @@ export const authController = {
     }
   },
 
-  // Update user profile
+  // Update authenticated user profile information
   async updateProfile(req: Request, res: Response) {
     const pool = db.getPool();
     
@@ -480,6 +481,7 @@ export const authController = {
         });
       }
 
+      // Update user name with timestamp
       const result = await pool.query(`
         UPDATE users 
         SET name = $1, updated_at = CURRENT_TIMESTAMP 
@@ -521,11 +523,10 @@ export const authController = {
     }
   },
 
-  // Logout user
+  // Logout user (client-side token invalidation)
   async logout(req: Request, res: Response) {
     try {
-      // For now, just return success
-      // In a production app, you'd want to blacklist the token
+      // Note: Token blacklisting would be implemented here in production
       res.json({
         success: true,
         message: 'Logged out successfully'

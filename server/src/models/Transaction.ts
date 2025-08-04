@@ -1,4 +1,4 @@
-// server/src/models/Transaction.ts
+// Transaction model for user financial activity
 export interface Transaction {
   id: string;
   user_id: string;
@@ -14,6 +14,7 @@ export interface Transaction {
   updated_at: Date;
 }
 
+// DTO for creating a new transaction
 export interface CreateTransaction {
   user_id: string;
   transaction_date: Date;
@@ -26,6 +27,7 @@ export interface CreateTransaction {
   csv_upload_id?: string;
 }
 
+// DTO for updating transaction fields (partial update)
 export interface UpdateTransaction {
   description?: string;
   category?: string;
@@ -33,7 +35,7 @@ export interface UpdateTransaction {
   type?: 'income' | 'expense';
 }
 
-// CSV Upload tracking
+// Model for tracking CSV upload metadata and status
 export interface CSVUpload {
   id: string;
   user_id: string;
