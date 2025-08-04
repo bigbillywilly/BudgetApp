@@ -140,18 +140,6 @@ BudgetApp/
 3. Use quick question buttons for common topics
 4. Get personalized advice based on your spending patterns
 
-## 🧪 Testing
-
-```bash
-# Run frontend tests
-cd client
-npm test
-
-# Run backend tests (when implemented)
-cd server
-npm test
-```
-
 ## Roadmap
 
 ### Phase 1 - Core Features (Current)
