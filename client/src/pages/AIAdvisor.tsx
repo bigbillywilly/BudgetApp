@@ -220,6 +220,18 @@ const AIAdvisor: React.FC = () => {
   const handleQuickQuestion = async (questionId: string) => {
     setIsLoading(true);
     try {
+      const questionObj = quickQuestions.find(q => q.id === questionId);
+      const questionText = questionObj ? questionObj.description : questionId;
+
+      // Show the user's quick question in the chat immediately
+      const userMessage: ChatMessage = {
+        id: `quick-user-${Date.now()}`,
+        message: questionText,
+        type: 'user',
+        timestamp: new Date()
+      };
+      setMessages(prev => [...prev, userMessage]);
+
       const token = localStorage.getItem('token');
       if (!token) {
         throw new Error('Authentication required');
@@ -242,14 +254,7 @@ const AIAdvisor: React.FC = () => {
 
       const data = await response.json();
       if (data.success) {
-        // Add both question and answer to conversation
-        const userMessage: ChatMessage = {
-          id: `quick-user-${Date.now()}`,
-          message: data.data.question,
-          type: 'user',
-          timestamp: new Date()
-        };
-
+        // Only add the AI's answer to the conversation
         const aiMessage: ChatMessage = {
           id: `quick-ai-${Date.now()}`,
           message: data.data.answer,
@@ -258,7 +263,7 @@ const AIAdvisor: React.FC = () => {
           tokensUsed: data.data.tokensUsed
         };
 
-        setMessages(prev => [...prev, userMessage, aiMessage]);
+        setMessages(prev => [...prev, aiMessage]);
       }
     } catch (error) {
       console.error('Error with quick question:', error);
