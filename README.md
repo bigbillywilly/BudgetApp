@@ -2,7 +2,7 @@
 
 A full-stack personal finance tracking application built with React, TypeScript, and Node.js. MoneyWise helps users manage their monthly budgets, track expenses through CSV uploads, and get AI-powered financial advice.
 
-![MoneyWise Dashboard](https://via.placeholder.com/800x400/4F46E5/FFFFFF?text=MoneyWise+Dashboard+Screenshot)
+![MoneyWise Dashboard](https://budget-app-orpin-nu.vercel.app/)
 
 ## Features
 
@@ -149,22 +149,21 @@ BudgetApp/
 - [x] Local data persistence
 - [x] Responsive design
 
-### Phase 2 - Backend Integration (In Progress)
-- [ ] User authentication system
-- [ ] PostgreSQL database setup
-- [ ] RESTful API endpoints
-- [ ] Data migration from localStorage
-- [ ] Enhanced security features
+### Phase 2 - Backend Integration
+- [x] User authentication system
+- [x] PostgreSQL database setup
+- [x] RESTful API endpoints
+- [x] Data migration from localStorage
+- [x] Enhanced security features
 
 ### Phase 3 - Advanced Features
-- [ ] Real AI integration (OpenAI/Anthropic)
-- [ ] Advanced analytics and insights
-- [ ] Goal tracking and notifications
-- [ ] Export functionality
-- [ ] Multi-currency support
+- [x] Real AI integration (OpenAI/Anthropic)
+- [x] Advanced analytics and insights
+- [x] Goal tracking and notifications
+- [x] Export functionality
+- [x] Multi-currency support
 
 ### Phase 4 - Production
-- [ ] Docker containerization
 - [ ] CI/CD pipeline
 - [ ] Cloud deployment
 - [ ] Performance optimization
@@ -172,7 +171,7 @@ BudgetApp/
 
 ## Contributing
 
-This is a learning project developed for internship purposes. While not currently accepting contributions, feedback and suggestions are welcome!
+This is a learning project. While not currently accepting contributions, feedback and suggestions are welcome!
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -187,7 +186,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## Author
 
 **Me**
-- GitHub: [@yourusername](https://github.com/bigbillywiwlly)
+- GitHub: [@bigbillywilly](https://github.com/bigbillywilly)
 
 ## Acknowledgments
 
