@@ -73,6 +73,16 @@ const MonthSelector: React.FC<{
   const dropdownRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
 
+  // Sort months chronologically for proper navigation (newest first)
+  const sortedMonths = useMemo(() => {
+    return [...availableMonths].sort((a, b) => {
+      if (a.year !== b.year) {
+        return b.year - a.year; // Newer years first
+      }
+      return b.month - a.month; // Newer months first within same year
+    });
+  }, [availableMonths]);
+
   // Calculate dropdown position for portal rendering to avoid z-index issues
   useEffect(() => {
     const updatePosition = () => {
@@ -116,19 +126,23 @@ const MonthSelector: React.FC<{
     };
   }, [isOpen]);
 
-  // Navigate between available months with boundary checking
-  const navigateMonth = (direction: 'prev' | 'next') => {
-    const currentIndex = availableMonths.findIndex(m => m.key === selectedMonth.key);
-    if (direction === 'prev' && currentIndex < availableMonths.length - 1) {
-      onMonthChange(availableMonths[currentIndex + 1]); // Go to older month
-    } else if (direction === 'next' && currentIndex > 0) {
-      onMonthChange(availableMonths[currentIndex - 1]); // Go to newer month
+  // Navigate between available months with intuitive direction logic
+  const navigateMonth = (direction: 'back' | 'forward') => {
+    const currentIndex = sortedMonths.findIndex(m => m.key === selectedMonth.key);
+    
+    if (direction === 'back' && currentIndex < sortedMonths.length - 1) {
+      // Go back in time (to an older month)
+      onMonthChange(sortedMonths[currentIndex + 1]);
+    } else if (direction === 'forward' && currentIndex > 0) {
+      // Go forward in time (to a newer month)
+      onMonthChange(sortedMonths[currentIndex - 1]);
     }
   };
 
   // Determine navigation button availability based on current position
-  const canNavigatePrev = availableMonths.findIndex(m => m.key === selectedMonth.key) < availableMonths.length - 1;
-  const canNavigateNext = availableMonths.findIndex(m => m.key === selectedMonth.key) > 0;
+  const currentIndex = sortedMonths.findIndex(m => m.key === selectedMonth.key);
+  const canGoBack = currentIndex < sortedMonths.length - 1; // Can go to older months
+  const canGoForward = currentIndex > 0; // Can go to newer months
 
   return (
     <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-4 border border-white/20">
@@ -142,12 +156,12 @@ const MonthSelector: React.FC<{
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Navigation to previous month (older) */}
+          {/* Left arrow - go back in time (to older month) */}
           <button
-            onClick={() => navigateMonth('prev')}
-            disabled={!canNavigatePrev}
+            onClick={() => navigateMonth('back')}
+            disabled={!canGoBack}
             className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Go to previous month"
+            title="Go back in time (older month)"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
@@ -173,7 +187,7 @@ const MonthSelector: React.FC<{
                   zIndex: 999999
                 }}
               >
-                {availableMonths.map((month) => (
+                {sortedMonths.map((month) => (
                   <button
                     key={month.key}
                     onClick={() => {
@@ -192,12 +206,12 @@ const MonthSelector: React.FC<{
             )}
           </div>
 
-          {/* Navigation to next month (newer) */}
+          {/* Right arrow - go forward in time (to newer month) */}
           <button
-            onClick={() => navigateMonth('next')}
-            disabled={!canNavigateNext}
+            onClick={() => navigateMonth('forward')}
+            disabled={!canGoForward}
             className="p-2 rounded-lg border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            title="Go to next month"
+            title="Go forward in time (newer month)"
           >
             <ChevronRight className="w-4 h-4" />
           </button>
@@ -865,30 +879,72 @@ const MonthlyTransactions: React.FC = () => {
         )}
       </div>
 
-      {/* Quick month comparison for easy navigation */}
+      {/* Quick month navigation for easy navigation */}
       {availableMonths.length > 1 && (
         <div className="bg-white/70 backdrop-blur-sm rounded-2xl p-6 border border-white/20">
-          <h4 className="text-lg font-semibold text-gray-900 mb-4">Quick Month Comparison</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {availableMonths.slice(0, 3).map((month) => (
-              <button
-                key={month.key}
-                onClick={() => handleMonthChange(month)}
-                className={`p-4 rounded-xl border-2 transition-all duration-200 ${
-                  month.key === selectedMonth.key
-                    ? 'border-blue-500 bg-blue-50'
-                    : 'border-gray-200 hover:border-gray-300 hover:bg-gray-50'
-                }`}
-              >
-                <div className="text-sm text-gray-600">{month.label}</div>
-                <div className="text-lg font-bold text-gray-900">
-                  {month.key === selectedMonth.key ? monthlySpending.transactionCount : '—'}
-                </div>
-                <div className="text-xs text-gray-500">
-                  {month.key === selectedMonth.key ? 'transactions' : 'Click to view'}
-                </div>
-              </button>
-            ))}
+          <h4 className="text-lg font-semibold text-gray-900 mb-4">Quick Month Navigation</h4>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {/* Show current month and the 3 most recent months */}
+            {availableMonths
+              .slice()
+              .reverse() // Show newest months first
+              .slice(0, 4) // Take first 4 (most recent)
+              .map((month) => {
+                const isCurrent = month.key === selectedMonth.key;
+                const isCurrentCalendarMonth = month.month === new Date().getMonth() + 1 && 
+                                              month.year === new Date().getFullYear();
+                
+                return (
+                  <button
+                    key={month.key}
+                    onClick={() => handleMonthChange(month)}
+                    className={`p-3 rounded-xl border-2 transition-all duration-200 text-left ${
+                      isCurrent
+                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                        : 'border-gray-200 hover:border-blue-300 hover:bg-blue-25 hover:shadow-sm'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <div className="text-sm font-medium text-gray-900">{month.label}</div>
+                      {isCurrentCalendarMonth && (
+                        <div className="w-2 h-2 bg-green-500 rounded-full" title="Current month" />
+                      )}
+                    </div>
+                    <div className={`text-lg font-bold ${isCurrent ? 'text-blue-600' : 'text-gray-700'}`}>
+                      {isCurrent ? monthlySpending.transactionCount : '•••'}
+                    </div>
+                    <div className="text-xs text-gray-500">
+                      {isCurrent ? 'transactions' : 'Click to view'}
+                    </div>
+                  </button>
+                );
+              })}
+          </div>
+          
+          {/* Show all available months in a compact list */}
+          <div className="mt-4 pt-4 border-t border-gray-200">
+            <div className="text-sm text-gray-600 mb-2">All available months:</div>
+            <div className="flex flex-wrap gap-2">
+              {availableMonths
+                .slice()
+                .reverse()
+                .map((month) => (
+                  <button
+                    key={month.key}
+                    onClick={() => handleMonthChange(month)}
+                    className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                      month.key === selectedMonth.key
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    }`}
+                  >
+                    {month.month === new Date().getMonth() + 1 && month.year === new Date().getFullYear() 
+                      ? `${month.label} (Current)`
+                      : month.label
+                    }
+                  </button>
+                ))}
+            </div>
           </div>
         </div>
       )}
