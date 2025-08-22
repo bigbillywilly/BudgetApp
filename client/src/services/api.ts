@@ -71,7 +71,7 @@ interface UploadResponse {
   };
   insights: string[];
   categories: string[];
-  
+
   // Duplicate transaction detection and prevention
   duplicateInfo?: {
     duplicatesFound: number;
@@ -177,25 +177,25 @@ class ApiService {
     const headers: HeadersInit = {
       'Content-Type': 'application/json',
     };
-    
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
       console.log('Adding auth header with token:', token?.substring(0, 20) + '...');
     } else {
       console.warn('No auth token found in localStorage');
     }
-    
+
     return headers;
   }
 
   // Parse and validate API responses with error handling
   private async handleResponse<T>(response: Response): Promise<ApiResponse<T>> {
     let responseData: any;
-    
+
     try {
       const responseText = await response.text();
       console.log(`API Response [${response.status}]:`, responseText.substring(0, 200));
-      
+
       // Handle empty responses gracefully
       responseData = responseText ? JSON.parse(responseText) : {};
     } catch (error) {
@@ -205,7 +205,7 @@ class ApiService {
         error: `Failed to parse server response: ${response.status}`,
       };
     }
-    
+
     // Handle HTTP error responses
     if (!response.ok) {
       console.error(`API Error [${response.status}]:`, responseData);
@@ -233,7 +233,7 @@ class ApiService {
         resolve(token);
       }
     });
-    
+
     this.failedQueue = [];
   }
 
@@ -241,7 +241,7 @@ class ApiService {
   // User login with email and password
   async login(email: string, password: string): Promise<ApiResponse<LoginData>> {
     console.log('Attempting login for:', email);
-    
+
     const response = await fetch(`${this.baseUrl}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -249,7 +249,7 @@ class ApiService {
     });
 
     const result = await this.handleResponse<LoginData>(response);
-    
+
     // Store authentication tokens on successful login
     if (result.success && result.data?.tokens?.accessToken) {
       localStorage.setItem('accessToken', result.data.tokens.accessToken);
@@ -259,14 +259,14 @@ class ApiService {
     } else {
       console.error('Login failed:', result.error);
     }
-    
+
     return result;
   }
 
   // User registration with email, name, and password
   async register(email: string, name: string, password: string): Promise<ApiResponse<RegisterData>> {
     console.log('Attempting registration for:', email);
-    
+
     const response = await fetch(`${this.baseUrl}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -276,10 +276,32 @@ class ApiService {
     return this.handleResponse<RegisterData>(response);
   }
 
+  // Add this method to your apiService class
+  async forgotPassword(email: string): Promise<ApiResponse<{ message: string }>> {
+    try {
+      const response = await fetch(`${this.baseUrl}/api/auth/forgot-password`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error('Forgot password error:', error);
+      return {
+        success: false,
+        error: 'Failed to send reset email'
+      };
+    }
+  }
+
   // Refresh expired access token using stored refresh token
   async refreshToken(): Promise<ApiResponse<{ accessToken: string }>> {
     const refreshToken = localStorage.getItem('refreshToken');
-    
+
     if (!refreshToken) {
       console.warn('No refresh token available');
       return {
@@ -297,7 +319,7 @@ class ApiService {
     });
 
     const result = await this.handleResponse<{ accessToken: string }>(response);
-    
+
     // Update stored tokens on successful refresh
     if (result.success && result.data?.accessToken) {
       localStorage.setItem('accessToken', result.data.accessToken);
@@ -307,7 +329,7 @@ class ApiService {
       console.error('Token refresh failed:', result.error);
       this.clearAuth(); // Clear invalid tokens
     }
-    
+
     return result;
   }
 
@@ -334,7 +356,7 @@ class ApiService {
   // User logout with token cleanup
   async logout(): Promise<ApiResponse<void>> {
     console.log('Logging out...');
-    
+
     const response = await fetch(`${this.baseUrl}/api/auth/logout`, {
       method: 'POST',
       headers: this.getAuthHeaders(),
@@ -367,7 +389,7 @@ class ApiService {
 
   // Get historical financial data for analysis and trends
   async getHistoricalData(year?: number): Promise<ApiResponse<MonthlyData[]>> {
-    const endpoint = year 
+    const endpoint = year
       ? `/api/financial/historical?year=${year}`
       : '/api/financial/historical';
 
@@ -401,7 +423,7 @@ class ApiService {
 
     const endpoint = `/api/transactions${queryParams.toString() ? '?' + queryParams.toString() : ''}`;
     console.log('Fetching transactions from:', endpoint);
-    
+
     return this.authenticatedRequest<{ transactions: Transaction[]; pagination: any }>(endpoint);
   }
 
@@ -458,7 +480,7 @@ class ApiService {
 
   // Get monthly spending trends for analysis
   async getMonthlyTrends(months?: number): Promise<ApiResponse<{ trends: any[] }>> {
-    const endpoint = months 
+    const endpoint = months
       ? `/api/transactions/analytics/trends?months=${months}`
       : '/api/transactions/analytics/trends';
 
@@ -496,13 +518,13 @@ class ApiService {
   // Upload and process CSV bank statement file
   async uploadCSV(file: File): Promise<ApiResponse<UploadResponse>> {
     console.log('Uploading CSV file:', file.name, `(${file.size} bytes)`);
-    
+
     // Create FormData for file upload (not JSON)
     const formData = new FormData();
     formData.append('csvFile', file);
 
     const token = localStorage.getItem('accessToken') || localStorage.getItem('token');
-    
+
     if (!token) {
       console.error('No auth token for upload');
       return {
@@ -549,7 +571,7 @@ class ApiService {
 
   // Get monthly financial breakdown by year
   async getMonthlyBreakdown(year?: number): Promise<ApiResponse<{ breakdown: any[] }>> {
-    const endpoint = year 
+    const endpoint = year
       ? `/api/users/monthly-breakdown?year=${year}`
       : '/api/users/monthly-breakdown';
 
@@ -588,11 +610,11 @@ class ApiService {
 
   // Make authenticated request with automatic token refresh on 401 errors
   async authenticatedRequest<T>(
-    endpoint: string, 
+    endpoint: string,
     options: RequestInit = {}
   ): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
-    
+
     // Wait for ongoing token refresh to complete before proceeding
     if (this.isRefreshing) {
       console.log('Token refresh in progress, queueing request...');
@@ -617,22 +639,22 @@ class ApiService {
     // Handle 401 Unauthorized with automatic token refresh
     if (response.status === 401 && localStorage.getItem('refreshToken') && !this.isRefreshing) {
       console.log('Access token expired, attempting refresh...');
-      
+
       this.isRefreshing = true;
-      
+
       try {
         const refreshResult = await this.refreshToken();
-        
+
         if (refreshResult.success) {
           // Process queued requests with new token
           this.processQueue(null, refreshResult.data?.accessToken);
-          
+
           // Retry original request with refreshed token
           const newHeaders = {
             ...requestOptions.headers,
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`
           };
-          
+
           response = await fetch(url, {
             ...requestOptions,
             headers: newHeaders
@@ -670,13 +692,13 @@ class ApiService {
 
 // Export singleton instance and types
 export const apiService = new ApiService();
-export type { 
-  ApiResponse, 
+export type {
+  ApiResponse,
   LoginData,
   RegisterData,
-  UploadResponse, 
-  ChatResponse, 
-  ChatHistoryItem, 
+  UploadResponse,
+  ChatResponse,
+  ChatHistoryItem,
   QuickQuestionResponse,
   Transaction,
   MonthlyData,

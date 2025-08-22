@@ -1,6 +1,7 @@
 // server/src/services/authService.ts
 import { Pool } from 'pg';
 import { v4 as uuidv4 } from 'uuid';
+import nodemailer from 'nodemailer';
 import { db } from '../database/connection';
 import { jwtService } from '../utils/jwt';
 import { encryptionService } from '../utils/encryption';
@@ -20,12 +21,209 @@ export interface RegisterResponse {
   message: string;
 }
 
+// Email configuration interface
+interface EmailConfig {
+  host: string;
+  port: number;
+  secure: boolean;
+  auth: {
+    user: string;
+    pass: string;
+  };
+}
+
 // Auth service for registration, login, token management, and profile updates
 class AuthService {
   private pool: Pool;
+  private emailTransporter: nodemailer.Transporter | null = null;
 
   constructor() {
     this.pool = db.getPool();
+    this.initializeEmailTransporter();
+  }
+
+  // Initialize email transporter with configuration
+  private initializeEmailTransporter(): void {
+    try {
+      // Email configuration from environment variables
+      const emailConfig: EmailConfig = {
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        auth: {
+          user: process.env.SMTP_USER || '',
+          pass: process.env.SMTP_PASS || '' // Use app password for Gmail
+        }
+      };
+
+      // Only initialize if SMTP credentials are provided
+      if (emailConfig.auth.user && emailConfig.auth.pass) {
+        this.emailTransporter = nodemailer.createTransport(emailConfig);
+
+        // Verify SMTP connection
+        this.emailTransporter.verify((error, success) => {
+          if (error) {
+            logError('SMTP configuration error', error);
+            this.emailTransporter = null;
+          } else {
+            logInfo('SMTP server is ready to send emails');
+          }
+        });
+      } else {
+        logWarn('SMTP credentials not provided - email functionality disabled');
+      }
+    } catch (error) {
+      logError('Failed to initialize email transporter', error);
+      this.emailTransporter = null;
+    }
+  }
+
+  // Send email verification email
+  private async sendVerificationEmail(email: string, name: string, token: string): Promise<void> {
+    if (!this.emailTransporter) {
+      logWarn('Email transporter not available - skipping verification email');
+      return;
+    }
+
+    try {
+      const verificationUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/verify-email?token=${token}`;
+
+      const mailOptions = {
+        from: {
+          name: process.env.FROM_NAME || 'MoneyWise',
+          address: process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@moneywise.com'
+        },
+        to: email,
+        subject: 'Verify Your MoneyWise Account',
+        html: `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Welcome to MoneyWise!</h1>
+            </div>
+            
+            <div style="padding: 40px 20px; background-color: #f8f9fa;">
+              <h2 style="color: #333; margin-bottom: 20px;">Hi ${name},</h2>
+              
+              <p style="color: #666; font-size: 16px; line-height: 1.6;">
+                Thank you for signing up for MoneyWise! To complete your registration and start tracking your finances, 
+                please verify your email address by clicking the button below.
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${verificationUrl}" 
+                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                          color: white; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          font-weight: bold; 
+                          display: inline-block;">
+                  Verify Email Address
+                </a>
+              </div>
+              
+              <p style="color: #666; font-size: 14px; line-height: 1.6;">
+                If the button doesn't work, you can copy and paste this link into your browser:
+                <br>
+                <a href="${verificationUrl}" style="color: #667eea; word-break: break-all;">${verificationUrl}</a>
+              </p>
+              
+              <p style="color: #666; font-size: 14px; line-height: 1.6;">
+                This verification link will expire in 24 hours. If you didn't create an account with MoneyWise, 
+                you can safely ignore this email.
+              </p>
+            </div>
+            
+            <div style="background-color: #e9ecef; padding: 20px; text-align: center; font-size: 12px; color: #6c757d;">
+              <p>© 2024 MoneyWise. All rights reserved.</p>
+            </div>
+          </div>
+        `
+      };
+
+      await this.emailTransporter.sendMail(mailOptions);
+      logInfo('Verification email sent successfully', { email });
+    } catch (error) {
+      logError('Failed to send verification email', error);
+      // Don't throw error to prevent registration failure due to email issues
+    }
+  }
+
+  // Send password reset email
+  private async sendPasswordResetEmail(email: string, name: string, token: string): Promise<void> {
+    if (!this.emailTransporter) {
+      logWarn('Email transporter not available - skipping password reset email');
+      return;
+    }
+
+    try {
+      const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:3000'}/reset-password?token=${token}`;
+
+      const mailOptions = {
+        from: {
+          name: process.env.FROM_NAME || 'MoneyWise',
+          address: process.env.FROM_EMAIL || process.env.SMTP_USER || 'noreply@moneywise.com'
+        },
+        to: email,
+        subject: 'Reset Your MoneyWise Password',
+        html: `
+          <div style="max-width: 600px; margin: 0 auto; font-family: Arial, sans-serif;">
+            <div style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); padding: 40px 20px; text-align: center;">
+              <h1 style="color: white; margin: 0; font-size: 28px;">Password Reset Request</h1>
+            </div>
+            
+            <div style="padding: 40px 20px; background-color: #f8f9fa;">
+              <h2 style="color: #333; margin-bottom: 20px;">Hi ${name},</h2>
+              
+              <p style="color: #666; font-size: 16px; line-height: 1.6;">
+                We received a request to reset your MoneyWise account password. If you made this request, 
+                click the button below to create a new password.
+              </p>
+              
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="${resetUrl}" 
+                   style="background: linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%); 
+                          color: white; 
+                          padding: 15px 30px; 
+                          text-decoration: none; 
+                          border-radius: 8px; 
+                          font-weight: bold; 
+                          display: inline-block;">
+                  Reset Password
+                </a>
+              </div>
+              
+              <p style="color: #666; font-size: 14px; line-height: 1.6;">
+                If the button doesn't work, you can copy and paste this link into your browser:
+                <br>
+                <a href="${resetUrl}" style="color: #ff6b6b; word-break: break-all;">${resetUrl}</a>
+              </p>
+              
+              <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p style="color: #856404; font-size: 14px; margin: 0; font-weight: bold;">
+                  🔒 Security Notice
+                </p>
+                <p style="color: #856404; font-size: 14px; margin: 5px 0 0 0;">
+                  This reset link will expire in 1 hour for your security. If you didn't request a password reset, 
+                  please ignore this email or contact support if you have concerns.
+                </p>
+              </div>
+            </div>
+            
+            <div style="background-color: #e9ecef; padding: 20px; text-align: center; font-size: 12px; color: #6c757d;">
+              <p>© 2024 MoneyWise. All rights reserved.</p>
+              <p>If you're having trouble, contact us at support@moneywise.com</p>
+            </div>
+          </div>
+        `
+      };
+
+      await this.emailTransporter.sendMail(mailOptions);
+      logInfo('Password reset email sent successfully', { email });
+    } catch (error) {
+      logError('Failed to send password reset email', error);
+      throw new Error('Failed to send password reset email');
+    }
   }
 
   // Register new user with email verification
@@ -64,6 +262,11 @@ class AuthService {
 
       await client.query('COMMIT');
       const user = result.rows[0];
+
+      // Send verification email (async, don't wait for it)
+      this.sendVerificationEmail(user.email, user.name, emailVerificationToken).catch(error => {
+        logError('Failed to send verification email after registration', error);
+      });
 
       logInfo('User registered successfully', { userId: user.id, email: user.email });
 
@@ -172,24 +375,29 @@ class AuthService {
     }
   }
 
-  // Generate password reset token and set expiration
+  // Generate password reset token and send email
   async requestPasswordReset(email: string): Promise<void> {
     try {
       const token = jwtService.generatePasswordResetToken();
       const expires = new Date(Date.now() + 3600000); // 1 hour from now
 
       const result = await this.pool.query(
-        'UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE email = $3 RETURNING id',
+        'UPDATE users SET password_reset_token = $1, password_reset_expires = $2 WHERE email = $3 RETURNING id, name',
         [token, expires, email.toLowerCase()]
       );
 
       if (result.rows.length === 0) {
         logWarn('Password reset requested for non-existent email', { email });
+        // Don't reveal whether the email exists or not for security
         return;
       }
 
-      logInfo('Password reset requested', { email, userId: result.rows[0].id });
-      // TODO: Send email with reset token
+      const user = result.rows[0];
+
+      // Send password reset email
+      await this.sendPasswordResetEmail(email, user.name, token);
+
+      logInfo('Password reset requested and email sent', { email, userId: user.id });
     } catch (error) {
       logError('Password reset request failed', error);
       throw error;
@@ -283,6 +491,14 @@ class AuthService {
       logError('Failed to update user profile', error);
       throw error;
     }
+  }
+
+  // Get email transporter status for health checks
+  getEmailStatus(): { enabled: boolean; configured: boolean } {
+    return {
+      enabled: this.emailTransporter !== null,
+      configured: !!(process.env.SMTP_USER && process.env.SMTP_PASS)
+    };
   }
 }
 

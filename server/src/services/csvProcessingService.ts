@@ -33,82 +33,70 @@ export interface ProcessedCSV {
 
 // CSV processing service for parsing, categorization, and analytics
 export class CSVProcessingService {
-  // AI-driven transaction categorization using keyword and pattern matching
-  private aiCategorizeTransaction(description: string, originalCategory: string): string {
-    const desc = description.toLowerCase();
-    const categoryPatterns = {
-      'Food & Dining': [
-        'restaurant', 'cafe', 'coffee', 'food', 'dining', 'pizza', 'burger',
-        'starbucks', 'mcdonald', 'subway', 'chipotle', 'domino', 'kfc',
-        'taco bell', 'wendy', 'chick-fil-a', 'panera', 'dunkin',
-        'grubhub', 'doordash', 'uber eats', 'postmates', 'seamless'
-      ],
-      'Groceries': [
-        'grocery', 'supermarket', 'walmart', 'target', 'costco', 'kroger',
-        'safeway', 'publix', 'whole foods', 'trader joe', 'aldi',
-        'food lion', 'harris teeter', 'giant', 'stop shop'
-      ],
-      'Transportation': [
-        'gas', 'fuel', 'exxon', 'shell', 'bp', 'chevron', 'mobil',
-        'uber', 'lyft', 'taxi', 'cab', 'parking', 'metro', 'bus',
-        'train', 'airline', 'flight', 'car rental', 'hertz', 'enterprise'
-      ],
-      'Shopping': [
-        'amazon', 'ebay', 'apple store', 'best buy', 'home depot',
-        'lowes', 'macys', 'nordstrom', 'gap', 'old navy', 'kohls',
-        'tj maxx', 'marshalls', 'walmart', 'target', 'cvs', 'walgreens'
-      ],
-      'Bills & Utilities': [
-        'electric', 'electricity', 'water', 'gas company', 'internet',
-        'phone', 'cell', 'verizon', 'att', 'tmobile', 'sprint',
-        'comcast', 'xfinity', 'spectrum', 'cox', 'utility', 'power',
-        'insurance', 'mortgage', 'rent'
-      ],
-      'Entertainment': [
-        'movie', 'cinema', 'theater', 'netflix', 'spotify', 'hulu',
-        'disney', 'amazon prime', 'youtube', 'game', 'steam',
-        'playstation', 'xbox', 'nintendo', 'concert', 'ticket'
-      ],
-      'Health & Medical': [
-        'pharmacy', 'cvs', 'walgreens', 'rite aid', 'doctor', 'medical',
-        'hospital', 'clinic', 'dentist', 'dental', 'vision', 'health',
-        'prescription', 'medicine', 'gym', 'fitness', 'yoga'
-      ],
-      'Financial Services': [
-        'bank', 'atm', 'fee', 'interest', 'transfer', 'payment',
-        'credit card', 'loan', 'mortgage', 'investment'
-      ],
-      'Subscription Services': [
-        'subscription', 'monthly', 'netflix', 'spotify', 'adobe',
-        'microsoft', 'google', 'dropbox', 'icloud', 'membership'
-      ]
-    };
+  // Use CSV category first, then AI as fallback
+  private categorizeTransaction(description: string, originalCategory: string): string {
+    // Define your hardcoded categories
+    const validCategories = [
+      'Grocery', 'Health', 'Wifi / Utilities', 'Household', 'Laundry',
+      'Rideshare', 'Travel', 'Dining', 'Drinks/Dessert', 'Alcohol',
+      'Fashion', 'Beauty', 'Gym', 'Entertainment', 'Subscription',
+      'Credit', 'Income', 'Merchandise', 'Gifts', 'Other'
+    ];
 
-    for (const [category, patterns] of Object.entries(categoryPatterns)) {
-      if (patterns.some(pattern => desc.includes(pattern))) {
+    // If CSV has a category and it's one of your valid categories, use it directly
+    if (originalCategory && originalCategory.trim() && originalCategory !== 'Uncategorized') {
+      const category = originalCategory.trim();
+      
+      // Check if it's already a valid category
+      if (validCategories.includes(category)) {
         return category;
       }
+      
+      // Map some common variations to your standard names
+      const categoryMappings: Record<string, string> = {
+        'Restaurants': 'Dining',
+        'Gas Stations': 'Travel',
+        'Grocery Stores': 'Grocery',
+        'Department Stores': 'Merchandise',
+        'Online Purchases': 'Merchandise',
+        'Utilities': 'Wifi / Utilities',
+        'Healthcare': 'Health',
+        'Automotive': 'Travel',
+        'Services': 'Other',
+        'Fees': 'Credit'
+      };
+
+      // If there's a mapping, use it
+      if (categoryMappings[category]) {
+        return categoryMappings[category];
+      }
+      
+      // If CSV category is not in your hardcoded list, fall through to AI categorization
     }
 
-    const bankCategory = originalCategory.toLowerCase();
-    const bankCategoryMap: Record<string, string> = {
-      'restaurants': 'Food & Dining',
-      'gas stations': 'Transportation',
-      'grocery stores': 'Groceries',
-      'department stores': 'Shopping',
-      'online purchases': 'Shopping',
-      'utilities': 'Bills & Utilities',
-      'entertainment': 'Entertainment',
-      'healthcare': 'Health & Medical',
-      'automotive': 'Transportation',
-      'travel': 'Transportation',
-      'services': 'Services',
-      'fees': 'Financial Services'
+    // Only use AI categorization as fallback when CSV category is missing/invalid
+    const desc = description.toLowerCase();
+    
+    // MUFG salary detection for income
+    if (desc.includes('mufg') || desc.includes('salary') || desc.includes('paycheck')) {
+      return 'Income';
+    }
+
+    // Basic fallback categorization
+    const basicCategories = {
+      'Dining': ['restaurant', 'cafe', 'food', 'pizza', 'burger', 'starbucks', 'mcdonald'],
+      'Grocery': ['grocery', 'supermarket', 'safeway', 'whole foods', 'trader joe'],
+      'Travel': ['gas', 'fuel', 'uber', 'lyft', 'airline', 'hotel'],
+      'Merchandise': ['amazon', 'target', 'walmart', 'store', 'shopping'],
+      'Health': ['pharmacy', 'cvs', 'walgreens', 'doctor', 'medical'],
+      'Entertainment': ['netflix', 'spotify', 'movie', 'theater'],
+      'Wifi / Utilities': ['internet', 'phone', 'electric', 'water', 'utility'],
+      'Credit': ['payment', 'transfer', 'fee']
     };
 
-    for (const [bankCat, ourCat] of Object.entries(bankCategoryMap)) {
-      if (bankCategory.includes(bankCat)) {
-        return ourCat;
+    for (const [category, keywords] of Object.entries(basicCategories)) {
+      if (keywords.some(keyword => desc.includes(keyword))) {
+        return category;
       }
     }
 
@@ -146,12 +134,12 @@ export class CSVProcessingService {
       insights.push(`Your highest spending category is ${topSpendingCategory[0]} at $${topSpendingCategory[1].toFixed(2)}`);
     }
 
-    const foodTransactions = transactions.filter(t =>
-      t.aiCategory === 'Food & Dining' && t.type === 'debit'
+    const diningTransactions = transactions.filter(t =>
+      t.aiCategory === 'Dining' && t.type === 'debit'
     ).length;
 
-    if (foodTransactions > 0) {
-      insights.push(`You made ${foodTransactions} dining transactions this period`);
+    if (diningTransactions > 0) {
+      insights.push(`You made ${diningTransactions} dining transactions this period`);
     }
 
     insights.push(`Transaction period: ${summary.dateRange.start} to ${summary.dateRange.end}`);
@@ -208,7 +196,7 @@ export class CSVProcessingService {
                   cardNumber,
                   description,
                   originalCategory,
-                  aiCategory: this.aiCategorizeTransaction(description, originalCategory),
+                  aiCategory: this.categorizeTransaction(description, originalCategory),
                   amount: debitAmount,
                   type: 'debit'
                 });
@@ -223,7 +211,7 @@ export class CSVProcessingService {
                   cardNumber,
                   description,
                   originalCategory,
-                  aiCategory: 'Income/Refund',
+                  aiCategory: 'Income',
                   amount: creditAmount,
                   type: 'credit'
                 });
