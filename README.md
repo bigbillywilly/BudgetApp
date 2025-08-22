@@ -2,7 +2,7 @@
 
 A full-stack personal finance tracking application built with React, TypeScript, and Node.js. MoneyWise helps users manage their monthly budgets, track expenses through CSV uploads, and get AI-powered financial advice.
 
-![MoneyWise Dashboard](https://budget-app-orpin-nu.vercel.app/)
+https://budget-app-orpin-nu.vercel.app/
 
 ## Features
 
@@ -62,28 +62,6 @@ A full-stack personal finance tracking application built with React, TypeScript,
 - npm or yarn
 - Git
 
-## Quick Start
-
-### 1. Clone the Repository
-```bash
-git clone https://github.com/yourusername/moneywise.git
-cd moneywise
-```
-
-### 2. Install Client Dependencies
-```bash
-cd client
-npm install
-```
-
-### 3. Start Development Server
-```bash
-npm run dev
-```
-
-### 4. Open in Browser
-Navigate to `http://localhost:5173`
-
 ## Project Structure
 
 ```
@@ -140,49 +118,6 @@ BudgetApp/
 3. Use quick question buttons for common topics
 4. Get personalized advice based on your spending patterns
 
-## Roadmap
-
-### Phase 1 - Core Features (Current)
-- [x] Basic financial tracking
-- [x] CSV upload and parsing
-- [x] Historical data view
-- [x] Local data persistence
-- [x] Responsive design
-
-### Phase 2 - Backend Integration
-- [x] User authentication system
-- [x] PostgreSQL database setup
-- [x] RESTful API endpoints
-- [x] Data migration from localStorage
-- [x] Enhanced security features
-
-### Phase 3 - Advanced Features
-- [x] Real AI integration (OpenAI/Anthropic)
-- [x] Advanced analytics and insights
-- [x] Goal tracking and notifications
-- [x] Export functionality
-- [x] Multi-currency support
-
-### Phase 4 - Production
-- [ ] CI/CD pipeline
-- [ ] Cloud deployment
-- [ ] Performance optimization
-- [ ] Comprehensive testing suite
-
-## Contributing
-
-This is a learning project. While not currently accepting contributions, feedback and suggestions are welcome!
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
 ## Author
 
 **Me**
@@ -192,7 +127,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Built as part of my software engineering learning journey
 - Inspired by modern fintech applications
-- Thanks to the open-source community for the amazing tools and libraries
 
 ## Support
 
