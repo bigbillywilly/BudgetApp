@@ -2,7 +2,7 @@
 
 A full-stack personal finance tracking application built with React, TypeScript, and Node.js. MoneyWise helps users manage their monthly budgets, track expenses through CSV uploads, and get AI-powered financial advice.
 
-![MoneyWise Dashboard](https://budget-app-orpin-nu.vercel.app/)
+https://budget-app-orpin-nu.vercel.app/
 
 ## Features
 
