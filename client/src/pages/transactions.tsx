@@ -2,7 +2,7 @@
 // Provides transaction filtering, budget progress tracking, and manual transaction entry
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, DollarSign, X, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, Filter, Download, Plus, TrendingUp, TrendingDown, DollarSign, X, Calendar, ChevronLeft, ChevronRight, Edit2, Trash2 } from 'lucide-react';
 import { useBudget } from '../context/budgetContext';
 import { apiService, Transaction } from '../services/api';
 
@@ -240,7 +240,7 @@ const MonthSelector: React.FC<{
   );
 };
 
-// Modal for manually adding new transactions with unified category system
+// Modal for adding new transactions with unified category system
 const AddTransactionModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
@@ -408,6 +408,236 @@ const AddTransactionModal: React.FC<{
   );
 };
 
+// Modal for editing existing transactions
+const EditTransactionModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onTransactionUpdated: () => void;
+  transaction: Transaction | null;
+}> = ({ isOpen, onClose, onTransactionUpdated, transaction }) => {
+  // Form state initialized with transaction data
+  const [formData, setFormData] = useState({
+    description: '',
+    category: '',
+    amount: '',
+    type: 'expense' as 'income' | 'expense',
+    date: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Update form data when transaction changes
+  useEffect(() => {
+    if (transaction) {
+      setFormData({
+        description: transaction.description || '',
+        category: transaction.category || '',
+        amount: Math.abs(transaction.amount).toString(),
+        type: transaction.type || 'expense',
+        date: transaction.transaction_date ? transaction.transaction_date.split('T')[0] : ''
+      });
+    }
+  }, [transaction]);
+
+  // Handle form submission with validation and API call
+  const handleSubmit = async () => {
+    if (!formData.description || !formData.category || !formData.amount || !transaction) {
+      alert('Please fill in all fields');
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const updateData = {
+        description: formData.description,
+        category: formData.category,
+        amount: parseFloat(formData.amount),
+        type: formData.type,
+        transaction_date: formData.date
+      };
+
+      const response = await apiService.updateTransaction(transaction.id, updateData);
+      
+      if (response.success) {
+        onTransactionUpdated(); // Refresh transaction list
+        onClose();
+        console.log('Transaction updated successfully');
+      } else {
+        alert('Failed to update transaction');
+      }
+    } catch (error) {
+      console.error('Error updating transaction:', error);
+      alert('Failed to update transaction');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (!isOpen || !transaction) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-gray-900">Edit Transaction</h3>
+          <div className="text-sm text-gray-600">
+            #{transaction.id}
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="space-y-4">
+          {/* Transaction date input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+            <input
+              type="date"
+              value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+          </div>
+
+          {/* Transaction description */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Description</label>
+            <input
+              type="text"
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="Transaction description"
+            />
+          </div>
+
+          {/* Category selection using unified category system */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Category</label>
+            <select
+              value={formData.category}
+              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select a category</option>
+              {Object.entries(SPENDING_CATEGORIES).map(([groupName, groupCategories]) => (
+                <optgroup key={groupName} label={groupName}>
+                  {groupCategories.map(category => (
+                    <option key={category} value={category}>
+                      {category}
+                    </option>
+                  ))}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+
+          {/* Transaction amount */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Amount</label>
+            <input
+              type="number"
+              step="0.01"
+              value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+              placeholder="0.00"
+            />
+          </div>
+
+          {/* Transaction type (income/expense) */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Type</label>
+            <select
+              value={formData.type}
+              onChange={(e) => setFormData({ ...formData, type: e.target.value as 'income' | 'expense' })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="expense">Expense</option>
+              <option value="income">Income</option>
+            </select>
+          </div>
+
+          {/* Form action buttons */}
+          <div className="flex gap-3 pt-4">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={!formData.description || !formData.category || !formData.amount || isSubmitting}
+              className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+            >
+              {isSubmitting ? 'Updating...' : 'Update Transaction'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Confirmation modal for transaction deletion
+const DeleteConfirmationModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  transaction: Transaction | null;
+  isDeleting: boolean;
+}> = ({ isOpen, onClose, onConfirm, transaction, isDeleting }) => {
+  if (!isOpen || !transaction) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-red-600">Delete Transaction</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5 text-gray-500" />
+          </button>
+        </div>
+
+        <div className="mb-6">
+          <p className="text-gray-700 mb-4">
+            Are you sure you want to delete this transaction? This action cannot be undone.
+          </p>
+          
+          {/* Transaction details preview */}
+          <div className="bg-gray-50 rounded-lg p-4 border">
+            <div className="text-sm text-gray-600 mb-1">Transaction Details:</div>
+            <div className="font-medium text-gray-900">{transaction.description}</div>
+            <div className="text-sm text-gray-600">{transaction.category}</div>
+            <div className={`text-lg font-bold ${transaction.type === 'income' ? 'text-green-600' : 'text-red-600'}`}>
+              {transaction.type === 'income' ? '+' : '-'}${Math.abs(transaction.amount).toFixed(2)}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-md hover:bg-gray-200 transition-colors"
+            disabled={isDeleting}
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={isDeleting}
+            className="flex-1 bg-red-600 text-white py-2 px-4 rounded-md hover:bg-red-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors"
+          >
+            {isDeleting ? 'Deleting...' : 'Delete Transaction'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const MonthlyTransactions: React.FC = () => {
   const { budget, isLoading: budgetLoading } = useBudget();
   
@@ -420,6 +650,12 @@ const MonthlyTransactions: React.FC = () => {
   const [categories, setCategories] = useState<string[]>([]);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [availableMonths, setAvailableMonths] = useState<MonthYear[]>([]);
+  
+  // Edit/Delete modal states
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   
   // Initialize with current month as default selection
   const [selectedMonth, setSelectedMonth] = useState<MonthYear>(() => {
@@ -517,9 +753,14 @@ const MonthlyTransactions: React.FC = () => {
     }
   };
 
-  // Refresh transaction list after new transaction creation
+  // Refresh transaction list after changes
   const handleTransactionAdded = () => {
     loadTransactions();
+  };
+
+  const handleTransactionUpdated = () => {
+    loadTransactions();
+    setSelectedTransaction(null);
   };
 
   // Handle month change and reset pagination
@@ -527,6 +768,42 @@ const MonthlyTransactions: React.FC = () => {
     setSelectedMonth(month);
     setCurrentPage(1); // Reset to first page when changing months
     console.log(`Changed to view transactions for ${month.label}`);
+  };
+
+  // Handle edit transaction
+  const handleEditTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle delete transaction
+  const handleDeleteTransaction = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Confirm delete transaction
+  const confirmDeleteTransaction = async () => {
+    if (!selectedTransaction) return;
+
+    setIsDeleting(true);
+    try {
+      const response = await apiService.deleteTransaction(selectedTransaction.id);
+      
+      if (response.success) {
+        console.log('Transaction deleted successfully');
+        loadTransactions(); // Refresh the list
+        setIsDeleteModalOpen(false);
+        setSelectedTransaction(null);
+      } else {
+        alert('Failed to delete transaction');
+      }
+    } catch (error) {
+      console.error('Error deleting transaction:', error);
+      alert('Failed to delete transaction');
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   // Calculate monthly spending summary including budget integration
@@ -760,7 +1037,7 @@ const MonthlyTransactions: React.FC = () => {
         </div>
       </div>
 
-      {/* Main transactions table */} 
+      {/* Main transactions table with edit/delete functionality */} 
       <div className="bg-white/70 backdrop-blur-sm rounded-2xl border border-white/20 overflow-hidden">
         <div className="p-4 border-b border-gray-200 flex items-center justify-between">
           <h4 className="text-lg font-semibold text-gray-900">
@@ -795,19 +1072,22 @@ const MonthlyTransactions: React.FC = () => {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
                 </th>
+                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {isLoading ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center">
+                  <td colSpan={6} className="px-6 py-12 text-center">
                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
                     <p className="mt-2 text-gray-500">Loading {selectedMonth.label} transactions...</p>
                   </td>
                 </tr>
               ) : transactions.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-12 text-center text-gray-500">
+                  <td colSpan={6} className="px-6 py-12 text-center text-gray-500">
                     No transactions found for {selectedMonth.label}.
                     <br />
                     <button
@@ -845,6 +1125,26 @@ const MonthlyTransactions: React.FC = () => {
                       }`}>
                         {transaction.type}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        {/* Edit button */}
+                        <button
+                          onClick={() => handleEditTransaction(transaction)}
+                          className="p-1 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                          title="Edit transaction"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        {/* Delete button */}
+                        <button
+                          onClick={() => handleDeleteTransaction(transaction)}
+                          className="p-1 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+                          title="Delete transaction"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))
@@ -966,6 +1266,29 @@ const MonthlyTransactions: React.FC = () => {
         selectedMonth={selectedMonth}
       />
 
+      {/* Modal for editing transactions */}
+      <EditTransactionModal
+        isOpen={isEditModalOpen}
+        onClose={() => {
+          setIsEditModalOpen(false);
+          setSelectedTransaction(null);
+        }}
+        onTransactionUpdated={handleTransactionUpdated}
+        transaction={selectedTransaction}
+      />
+
+      {/* Modal for deleting transactions */}
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedTransaction(null);
+        }}
+        onConfirm={confirmDeleteTransaction}
+        transaction={selectedTransaction}
+        isDeleting={isDeleting}
+      />
+
       {/* Development debug information */}
       {import.meta.env.DEV && (
         <div className="mt-6 p-4 bg-gray-800 text-green-400 text-xs rounded-lg font-mono">
@@ -979,6 +1302,7 @@ const MonthlyTransactions: React.FC = () => {
           <div>Budget Available: ${budget.availableToSpend}</div>
           <div>Current Page: {currentPage} of {totalPages}</div>
           <div>Categories Available: {ALL_CATEGORIES.length}</div>
+          <div>Selected Transaction: {selectedTransaction?.id || 'None'}</div>
           {budgetProgress && (
             <div>Budget Progress: {budgetProgress.percentage.toFixed(1)}% (Over: {budgetProgress.isOverBudget ? 'Yes' : 'No'})</div>
           )}
