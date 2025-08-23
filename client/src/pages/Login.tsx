@@ -180,7 +180,8 @@ const Login = () => {
             </div>
           </div>
 
-          <div onSubmit={handleSubmit} className="space-y-4">
+          {/* FIXED: Changed from div to form and button type to submit */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Email input field with validation */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -284,10 +285,9 @@ const Login = () => {
               </div>
             )}
 
-            {/* Form submission button with loading state */}
+            {/* FIXED: Changed button type to submit */}
             <button
-              type="button"
-              onClick={handleSubmit}
+              type="submit"
               disabled={isLoading}
               className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:transform-none disabled:hover:scale-100 flex items-center justify-center"
             >
@@ -302,7 +302,7 @@ const Login = () => {
                 </>
               )}
             </button>
-          </div>
+          </form>
 
           {/* Mode switching helper text */}
           {currentMode !== 'forgot' && (
