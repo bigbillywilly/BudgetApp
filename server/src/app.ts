@@ -209,7 +209,7 @@ class MoneyWiseApp {
   private getCorsOrigins(): string[] {
     if (process.env.NODE_ENV === 'production') {
       return [
-        'https://budget-app-orpin-nu.vercel.app',
+        'https://budget-b2cyoznxt-willys-projects-a8ff841f.vercel.app/',
         process.env.FRONTEND_URL
       ].filter((origin): origin is string => typeof origin === 'string' && origin.length > 0);
     }
