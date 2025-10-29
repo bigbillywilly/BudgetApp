@@ -206,20 +206,50 @@ class MoneyWiseApp {
   }
 
   // CORS origin whitelist for production and development
-  private getCorsOrigins(): string[] {
-    if (process.env.NODE_ENV === 'production') {
-      return [
-        'budget-glty4ee79-willys-projects-a8ff841f.vercel.app',
+ // CORS origin whitelist for production and development
+private getCorsOrigins(): any {
+  if (process.env.NODE_ENV === 'production') {
+    // Return a function for dynamic origin validation
+    return (origin: string | undefined, callback: (err: Error | null, allow?: boolean) => void) => {
+      // Allow requests with no origin (mobile apps, Postman, etc.)
+      if (!origin) {
+        console.log('✅ CORS: No origin - allowing');
+        return callback(null, true);
+      }
+
+      // Static allowed origins
+      const staticOrigins = [
+        'https://budget-app-orpin-nu.vercel.app',
         process.env.FRONTEND_URL
-      ].filter((origin): origin is string => typeof origin === 'string' && origin.length > 0);
-    }
-    return [
-      'http://localhost:3000',
-      'http://localhost:5173',
-      'http://127.0.0.1:3000',
-      'http://127.0.0.1:5173'
-    ];
+      ].filter((url): url is string => typeof url === 'string' && url.length > 0);
+
+      // Check if it's a static origin
+      if (staticOrigins.includes(origin)) {
+        console.log(`✅ CORS: Static origin allowed - ${origin}`);
+        return callback(null, true);
+      }
+
+      // Check if it's ANY Vercel deployment
+      if (origin.endsWith('.vercel.app')) {
+        console.log(`✅ CORS: Vercel deployment allowed - ${origin}`);
+        return callback(null, true);
+      }
+
+      // Origin not allowed
+      console.warn(`❌ CORS: Origin blocked - ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    };
   }
+
+  // Development origins
+  console.log('Development mode - allowing localhost origins');
+  return [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173'
+  ];
+}
 
   // Generate unique request ID for tracing
   private generateRequestId(): string {
